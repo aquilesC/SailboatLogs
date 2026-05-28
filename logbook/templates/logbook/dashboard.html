@@ -38,9 +38,19 @@
           {{ active_trip.boat.name }} &middot; Started {{ active_trip.start_date }}
         </p>
       </div>
-      <a href="{% url 'trip_detail' pk=active_trip.pk %}" class="btn-outline text-sm !py-2 !px-4" id="view-active-trip">
-        View Trip
-      </a>
+      <div class="flex flex-col gap-2 shrink-0">
+        <a href="{% url 'trip_detail' pk=active_trip.pk %}" class="btn-outline text-sm !py-2 !px-4" id="view-active-trip">
+          View Trip
+        </a>
+        <form method="post" action="{% url 'trip_end' pk=active_trip.pk %}" id="end-active-trip-form">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'dashboard' %}">
+          <button type="submit" class="btn-danger text-sm !py-2 !px-4 w-full" id="end-active-trip-btn"
+                  onclick="return confirm('End trip \'{{ active_trip.title }}\'? The end date will be set to today.')">
+            End Trip
+          </button>
+        </form>
+      </div>
     </div>
   </div>
   {% endif %}

@@ -34,22 +34,23 @@
   {% if trips %}
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     {% for trip in trips %}
-    <a href="{% url 'trip_detail' pk=trip.pk %}" 
-       class="card block hover:bg-bg-surface-highlight hover:shadow-md transition-all !p-5"
+    <div class="card hover:bg-bg-surface-highlight hover:shadow-md transition-all !p-5"
        id="trip-card-{{ trip.pk }}">
       <div class="flex items-start justify-between">
-        <div class="flex-1 min-w-0">
+        <a href="{% url 'trip_detail' pk=trip.pk %}" class="flex-1 min-w-0">
           <h3 class="truncate">{{ trip.title }}</h3>
           <p class="text-text-secondary text-sm mt-1">{{ trip.boat.name }}</p>
+        </a>
+        <div class="flex items-center gap-2 ml-3 shrink-0">
+          {% if trip.is_active %}
+          <span class="badge-warning">Active</span>
+          {% else %}
+          <span class="badge-success">Completed</span>
+          {% endif %}
         </div>
-        {% if trip.is_active %}
-        <span class="badge-warning ml-3 shrink-0">Active</span>
-        {% else %}
-        <span class="badge-success ml-3 shrink-0">Completed</span>
-        {% endif %}
       </div>
 
-      <div class="flex flex-wrap gap-x-6 gap-y-1 mt-4 text-xs font-mono text-text-secondary">
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-1 mt-4 text-xs font-mono text-text-secondary">
         <span>📅 {{ trip.start_date|date:"Y-m-d" }}{% if trip.end_date %} → {{ trip.end_date|date:"Y-m-d" }}{% endif %}</span>
         {% if trip.total_distance %}
         <span>🧭 {{ trip.total_distance|floatformat:1 }} nm</span>
@@ -57,8 +58,19 @@
         {% if trip.max_speed %}
         <span>⚡ {{ trip.max_speed|floatformat:1 }} kn max</span>
         {% endif %}
+
+        {% if trip.is_active %}
+        <form method="post" action="{% url 'trip_end' pk=trip.pk %}" class="ml-auto">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'trip_list' %}">
+          <button type="submit" class="text-status-danger text-xs font-semibold hover:underline cursor-pointer"
+                  onclick="return confirm('End trip \'{{ trip.title }}\'?')">
+            End Trip
+          </button>
+        </form>
+        {% endif %}
       </div>
-    </a>
+    </div>
     {% endfor %}
   </div>
   {% else %}

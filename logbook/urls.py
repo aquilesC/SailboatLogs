@@ -24,6 +24,7 @@ urlpatterns = [
     path('trips/', views.trip_list_view, name='trip_list'),
     path('trips/start/', views.trip_start_view, name='trip_start'),
     path('trips/<int:pk>/', views.trip_detail_view, name='trip_detail'),
+    path('trips/<int:pk>/end/', views.trip_end_view, name='trip_end'),
 
     # Public Shared Trip
     path('shared/<slug:share_slug>/', views.trip_public_view, name='trip_public'),

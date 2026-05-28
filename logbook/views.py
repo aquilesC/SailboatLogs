@@ -523,6 +523,25 @@ def trip_start_view(request):
     })
 
 
+@login_required
+def trip_end_view(request, pk):
+    """End an active trip (POST only)."""
+    trip = get_object_or_404(Trip, pk=pk, boat__shared_users=request.user)
+
+    if request.method == 'POST' and trip.is_active:
+        trip.is_active = False
+        trip.end_date = timezone.now().date()
+        trip.save(update_fields=['is_active', 'end_date'])
+
+        from django.contrib import messages
+        messages.success(request, f'Trip "{trip.title}" has been ended.')
+
+    # Redirect to the 'next' URL if provided, otherwise to the referring page
+    next_url = request.POST.get('next', '')
+    if next_url:
+        return redirect(next_url)
+    return redirect('trip_detail', pk=pk)
+
 def trip_public_view(request, share_slug):
     trip = get_object_or_404(Trip, share_slug=share_slug)
     log_entries = trip.log_entries.all().order_by('-timestamp').prefetch_related('tags', 'photos')
