@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save
 from django.db.models import Sum, Max
 from django.dispatch import receiver
-from .models import LogEntry, GPXFile
-from .utils import fetch_weather_from_open_meteo
+from .models import LogEntry, GPXFile, LogEntryPhoto
+from .utils import fetch_weather_from_open_meteo, extract_exif_datetime, generate_thumbnail
 import gpxpy
 import logging
 
@@ -47,12 +47,28 @@ def parse_gpx_file(sender, instance, created, **kwargs):
         gpx = gpxpy.parse(instance.file.file)
         instance.file.close()
 
-        # Extract all track points as [[lat, lng], ...]
+        # Extract all track points with all available data
         track_points = []
         for track in gpx.tracks:
             for segment in track.segments:
                 for point in segment.points:
-                    track_points.append([float(point.latitude), float(point.longitude)])
+                    pt = {
+                        'lat': float(point.latitude),
+                        'lng': float(point.longitude),
+                    }
+                    if point.elevation is not None:
+                        pt['ele'] = round(float(point.elevation), 1)
+                    if point.time is not None:
+                        pt['time'] = point.time.isoformat()
+                    if point.speed is not None:
+                        pt['speed'] = round(float(point.speed), 2)
+                    if point.horizontal_dilution is not None:
+                        pt['hdop'] = round(float(point.horizontal_dilution), 1)
+                    if point.vertical_dilution is not None:
+                        pt['vdop'] = round(float(point.vertical_dilution), 1)
+                    if point.position_dilution is not None:
+                        pt['pdop'] = round(float(point.position_dilution), 1)
+                    track_points.append(pt)
 
         # Calculate distance and speed
         moving_data = gpx.get_moving_data()
@@ -91,3 +107,36 @@ def _aggregate_trip_stats(trip):
         total_distance=stats['total_distance'] or None,
         max_speed=stats['top_speed'] or None,
     )
+
+
+@receiver(post_save, sender=LogEntryPhoto)
+def enrich_photo(sender, instance, created, **kwargs):
+    """On creation, extract EXIF datetime and generate a thumbnail."""
+    if not created:
+        return
+
+    if not instance.image:
+        return
+
+    update_fields = []
+
+    # 1. Extract EXIF datetime
+    try:
+        exif_dt = extract_exif_datetime(instance.image)
+        if exif_dt:
+            instance.taken_at = exif_dt
+            update_fields.append('taken_at')
+    except Exception as e:
+        logger.warning(f"Could not extract EXIF datetime for photo {instance.pk}: {e}")
+
+    # 2. Generate thumbnail
+    try:
+        thumb_file = generate_thumbnail(instance.image, size=(150, 150))
+        if thumb_file:
+            instance.thumbnail.save(thumb_file.name, thumb_file, save=False)
+            update_fields.append('thumbnail')
+    except Exception as e:
+        logger.warning(f"Could not generate thumbnail for photo {instance.pk}: {e}")
+
+    if update_fields:
+        instance.save(update_fields=update_fields)

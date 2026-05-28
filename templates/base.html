@@ -105,6 +105,43 @@
     </div>
   </footer>
 
+  <!-- Local timezone conversion -->
+  <script>
+  (function() {
+    const formats = {
+      time: { hour: '2-digit', minute: '2-digit', hour12: false },
+      date: { month: 'short', day: 'numeric', year: 'numeric' },
+      datetime: { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false },
+      short: { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric', hour12: false },
+    };
+
+    document.querySelectorAll('.local-time').forEach(function(el) {
+      const iso = el.getAttribute('datetime');
+      if (!iso) return;
+      const dt = new Date(iso);
+      if (isNaN(dt.getTime())) return;
+
+      const fmt = el.dataset.format || 'datetime';
+      const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      if (fmt === 'time-date') {
+        // Two-part format: "HH:MM · Mon DD, YYYY"
+        const timePart = dt.toLocaleString(undefined, { ...formats.time, timeZone: userTZ });
+        const datePart = dt.toLocaleString(undefined, { ...formats.date, timeZone: userTZ });
+        el.textContent = timePart + ' \u00b7 ' + datePart;
+      } else if (fmt === 'time-shortdate') {
+        // Two-part format: "HH:MM · Mon DD"
+        const timePart = dt.toLocaleString(undefined, { ...formats.time, timeZone: userTZ });
+        const datePart = dt.toLocaleString(undefined, { month: 'short', day: 'numeric', timeZone: userTZ });
+        el.textContent = timePart + ' \u00b7 ' + datePart;
+      } else {
+        const opts = { ...(formats[fmt] || formats.datetime), timeZone: userTZ };
+        el.textContent = dt.toLocaleString(undefined, opts);
+      }
+    });
+  })();
+  </script>
+
   {% block extra_js %}{% endblock %}
 </body>
 </html>

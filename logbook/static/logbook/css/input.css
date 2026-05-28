@@ -153,4 +153,10 @@
            bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20
            transition-colors duration-150;
   }
+
+  /* Photo marker on Leaflet map — strip default divIcon styles */
+  .photo-marker {
+    background: none !important;
+    border: none !important;
+  }
 }

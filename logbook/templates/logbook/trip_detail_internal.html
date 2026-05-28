@@ -158,7 +158,7 @@
                 {% endif %}
 
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
-                  <span class="text-text-secondary text-xs font-mono">{{ entry.timestamp|date:"H:i" }} &middot; {{ entry.timestamp|date:"M d" }}</span>
+                  <time class="local-time text-text-secondary text-xs font-mono" datetime="{{ entry.timestamp|date:'c' }}" data-format="time-shortdate">{{ entry.timestamp|date:"H:i" }} &middot; {{ entry.timestamp|date:"M d" }}</time>
                   {% if entry.latitude and entry.longitude %}
                   <span class="text-text-secondary text-xs font-mono">{{ entry.latitude }}°, {{ entry.longitude }}°</span>
                   {% endif %}
@@ -254,6 +254,97 @@
       fillOpacity: 0.9,
     }).addTo(map);
     allBounds.push(c);
+  });
+
+  // ── Photo markers on map ──
+  const photos = {{ photos_json|safe }};
+  const photoLocations = {{ photo_locations_json|safe }};
+
+  /**
+   * Interpolate position along a GPX track at a given timestamp.
+   * timed_points must be sorted by time (they are, from GPX parsing).
+   * Returns [lat, lng] or null.
+   */
+  function interpolateOnTrack(timedPoints, timestamp) {
+    if (!timedPoints || timedPoints.length === 0) return null;
+    const t = new Date(timestamp).getTime();
+
+    // Check bounds
+    const firstT = new Date(timedPoints[0].time).getTime();
+    const lastT = new Date(timedPoints[timedPoints.length - 1].time).getTime();
+    if (t < firstT || t > lastT) return null;
+
+    // Find bracketing points
+    for (let i = 0; i < timedPoints.length - 1; i++) {
+      const t1 = new Date(timedPoints[i].time).getTime();
+      const t2 = new Date(timedPoints[i + 1].time).getTime();
+      if (t >= t1 && t <= t2) {
+        const ratio = (t2 === t1) ? 0 : (t - t1) / (t2 - t1);
+        const lat = timedPoints[i].lat + ratio * (timedPoints[i + 1].lat - timedPoints[i].lat);
+        const lng = timedPoints[i].lng + ratio * (timedPoints[i + 1].lng - timedPoints[i].lng);
+        return [lat, lng];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Create a photo marker icon
+   */
+  function photoIcon(thumbUrl, isProximity) {
+    const borderStyle = isProximity
+      ? 'border: 2px dashed #EA580C;'
+      : 'border: 2px solid #FFFFFF;';
+    return L.divIcon({
+      className: 'photo-marker',
+      html: '<img src="' + thumbUrl + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;' + borderStyle + 'box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;" />',
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+    });
+  }
+
+  photos.forEach(function(photo) {
+    let position = null;
+    let isProximity = false;
+
+    // Strategy 1: Interpolate on GPX track
+    for (let i = 0; i < gpxTracks.length; i++) {
+      const result = interpolateOnTrack(gpxTracks[i].timed_points, photo.timestamp);
+      if (result) {
+        position = result;
+        break;
+      }
+    }
+
+    // Strategy 2: Proximity association (server-side computed)
+    if (!position && photoLocations[String(photo.id)]) {
+      const loc = photoLocations[String(photo.id)];
+      position = [loc.lat, loc.lng];
+      isProximity = true;
+    }
+
+    // Strategy 3: Direct coordinates from log entry
+    if (!position && photo.lat != null && photo.lng != null) {
+      position = [photo.lat, photo.lng];
+    }
+
+    if (position) {
+      const marker = L.marker(position, {
+        icon: photoIcon(photo.thumb_url, isProximity),
+        zIndexOffset: 1000,
+      }).addTo(map);
+
+      // Popup with larger image
+      const caption = photo.caption ? '<br><span style="font-size:11px;color:#666;">' + photo.caption + '</span>' : '';
+      marker.bindPopup(
+        '<a href="' + photo.url + '" target="_blank">' +
+        '<img src="' + photo.thumb_url + '" style="width:200px;max-height:200px;object-fit:cover;border-radius:8px;" />' +
+        '</a>' + caption,
+        { maxWidth: 220 }
+      );
+
+      allBounds.push(position);
+    }
   });
 
   // Fit map to all data

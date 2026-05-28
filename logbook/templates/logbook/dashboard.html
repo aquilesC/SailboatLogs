@@ -91,7 +91,7 @@
             <div class="flex-1 min-w-0">
               <p class="text-text-primary">{{ log.entry_text|truncatewords:30 }}</p>
               <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
-                <span class="text-text-secondary text-xs font-mono">{{ log.timestamp|date:"Y-m-d H:i" }}</span>
+                <time class="local-time text-text-secondary text-xs font-mono" datetime="{{ log.timestamp|date:'c' }}" data-format="datetime">{{ log.timestamp|date:"Y-m-d H:i" }}</time>
                 <a href="{% url 'trip_detail' pk=log.trip.pk %}" class="text-brand-secondary text-xs font-semibold hover:underline">
                   {{ log.trip.title }}
                 </a>

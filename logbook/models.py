@@ -1,4 +1,5 @@
 import uuid
+import os
 
 from django.db import models
 from django.conf import settings
@@ -110,6 +111,12 @@ class GPXFile(models.Model):
         return f"{self.original_filename} ({self.trip.title})"
 
 
+def _photo_thumbnail_path(instance, filename):
+    """Upload thumbnail alongside the original, in a 'thumbs/' subdirectory."""
+    base, ext = os.path.splitext(filename)
+    return f'log_photos/thumbs/{base}_thumb{ext}'
+
+
 class LogEntryPhoto(models.Model):
     """A photo attached to a log entry. Can arrive via WhatsApp or web upload."""
     SOURCE_CHOICES = [
@@ -119,12 +126,21 @@ class LogEntryPhoto(models.Model):
 
     log_entry = models.ForeignKey(LogEntry, on_delete=models.CASCADE, related_name='photos')
     image = models.ImageField(upload_to='log_photos/%Y/%m/')
+    thumbnail = models.ImageField(upload_to=_photo_thumbnail_path, blank=True,
+                                  help_text="Auto-generated 150px thumbnail for map markers")
     caption = models.CharField(max_length=255, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    taken_at = models.DateTimeField(null=True, blank=True,
+                                    help_text="Photo capture time from EXIF, falls back to log entry timestamp")
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='web')
 
     class Meta:
         ordering = ['uploaded_at']
+
+    @property
+    def effective_timestamp(self):
+        """Return taken_at if available, otherwise the parent log entry's timestamp."""
+        return self.taken_at or self.log_entry.timestamp
 
     def __str__(self):
         return f"Photo for {self.log_entry}"

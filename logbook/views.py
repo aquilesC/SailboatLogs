@@ -236,15 +236,145 @@ def boat_edit_view(request, pk):
 # ═══════════════════════════════════════════
 
 def _build_gpx_tracks_json(trip):
-    """Build a JSON-safe list of GPX tracks for the map."""
+    """Build a JSON-safe list of GPX tracks for the map.
+
+    Each track includes:
+    - points: [[lat, lng], ...] for Leaflet polyline rendering
+    - timed_points: [{lat, lng, time}, ...] for photo interpolation (only points with timestamps)
+    - filename: original GPX filename
+    """
     tracks = []
     for gpx in trip.gpx_files.all():
         if gpx.track_points:
+            # Handle both old format ([lat, lng] arrays) and new format (dicts)
+            polyline_points = []
+            timed_points = []
+            for pt in gpx.track_points:
+                if isinstance(pt, dict):
+                    polyline_points.append([pt['lat'], pt['lng']])
+                    if 'time' in pt:
+                        timed_points.append({
+                            'lat': pt['lat'],
+                            'lng': pt['lng'],
+                            'time': pt['time'],
+                        })
+                else:
+                    # Legacy [lat, lng] format
+                    polyline_points.append(pt)
+
             tracks.append({
-                'points': gpx.track_points,
+                'points': polyline_points,
+                'timed_points': timed_points,
                 'filename': gpx.original_filename,
             })
     return json.dumps(tracks)
+
+
+def _build_photos_json(log_entries):
+    """Build a JSON list of photos with timestamps and thumbnail URLs for map placement.
+
+    Returns JSON string of:
+    [{
+        id: photo.pk,
+        url: full image URL,
+        thumb_url: thumbnail URL (or full if no thumbnail),
+        caption: photo caption,
+        timestamp: ISO 8601 effective timestamp,
+        lat: log entry latitude (if available),
+        lng: log entry longitude (if available),
+    }, ...]
+    """
+    photos = []
+    for entry in log_entries:
+        for photo in entry.photos.all():
+            p = {
+                'id': photo.pk,
+                'url': photo.image.url,
+                'thumb_url': photo.thumbnail.url if photo.thumbnail else photo.image.url,
+                'caption': photo.caption or '',
+                'timestamp': photo.effective_timestamp.isoformat(),
+            }
+            if entry.latitude and entry.longitude:
+                p['lat'] = float(entry.latitude)
+                p['lng'] = float(entry.longitude)
+            photos.append(p)
+    return json.dumps(photos)
+
+
+def _associate_photos_to_locations(trip, log_entries):
+    """Associate photos without coordinates to nearby log entry locations.
+
+    For each photo whose log entry has no coordinates and that cannot be placed
+    on a GPX track, find the nearest log entry (by timestamp) that HAS coordinates,
+    within ±30 minutes.
+
+    Returns a JSON string of: { photo_id: { lat, lng, source_entry_id } }
+    """
+    from datetime import timedelta
+
+    # Collect entries with coordinates
+    entries_with_coords = [
+        e for e in log_entries
+        if e.latitude and e.longitude
+    ]
+
+    if not entries_with_coords:
+        return json.dumps({})
+
+    # Get the time range covered by GPX tracks (to exclude photos that can be placed on track)
+    gpx_time_ranges = []
+    for gpx in trip.gpx_files.all():
+        if gpx.track_points:
+            times = []
+            for pt in gpx.track_points:
+                if isinstance(pt, dict) and 'time' in pt:
+                    try:
+                        from dateutil import parser as dt_parser
+                        times.append(dt_parser.parse(pt['time']))
+                    except Exception:
+                        pass
+            if times:
+                gpx_time_ranges.append((min(times), max(times)))
+
+    proximity_limit = timedelta(minutes=30)
+    associations = {}
+
+    for entry in log_entries:
+        if entry.latitude and entry.longitude:
+            continue  # Entry already has coordinates
+
+        for photo in entry.photos.all():
+            photo_time = photo.effective_timestamp
+
+            # Check if this photo can be placed on a GPX track
+            on_track = False
+            for start_t, end_t in gpx_time_ranges:
+                if start_t <= photo_time <= end_t:
+                    on_track = True
+                    break
+
+            if on_track:
+                continue  # Will be handled by GPX interpolation in JS
+
+            # Find nearest entry with coordinates within ±30 minutes
+            best_entry = None
+            best_delta = None
+            for coord_entry in entries_with_coords:
+                delta = abs(photo_time - coord_entry.timestamp)
+                if delta <= proximity_limit:
+                    if best_delta is None or delta < best_delta:
+                        best_delta = delta
+                        best_entry = coord_entry
+
+            if best_entry:
+                associations[str(photo.pk)] = {
+                    'lat': float(best_entry.latitude),
+                    'lng': float(best_entry.longitude),
+                    'source_entry_id': best_entry.pk,
+                }
+
+    return json.dumps(associations)
+
 
 
 @login_required
@@ -302,11 +432,15 @@ def trip_detail_view(request, pk):
             return redirect('trip_detail', pk=pk)
 
     gpx_tracks_json = _build_gpx_tracks_json(trip)
+    photos_json = _build_photos_json(log_entries)
+    photo_locations_json = _associate_photos_to_locations(trip, log_entries)
 
     return render(request, 'logbook/trip_detail_internal.html', {
         'trip': trip,
         'log_entries': log_entries,
         'gpx_tracks_json': gpx_tracks_json,
+        'photos_json': photos_json,
+        'photo_locations_json': photo_locations_json,
     })
 
 
@@ -333,11 +467,15 @@ def trip_public_view(request, share_slug):
     trip = get_object_or_404(Trip, share_slug=share_slug)
     log_entries = trip.log_entries.all().order_by('-timestamp').prefetch_related('tags', 'photos')
     gpx_tracks_json = _build_gpx_tracks_json(trip)
+    photos_json = _build_photos_json(log_entries)
+    photo_locations_json = _associate_photos_to_locations(trip, log_entries)
 
     return render(request, 'logbook/trip_detail_public.html', {
         'trip': trip,
         'log_entries': log_entries,
         'gpx_tracks_json': gpx_tracks_json,
+        'photos_json': photos_json,
+        'photo_locations_json': photo_locations_json,
     })
 
 
