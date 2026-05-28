@@ -113,51 +113,7 @@
       {% if recent_logs %}
       <div class="space-y-3">
         {% for log in recent_logs %}
-        <div class="card !p-4" id="log-entry-{{ log.pk }}">
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1 min-w-0">
-              <p class="text-text-primary">{{ log.entry_text|truncatewords:30 }}</p>
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
-                <time class="local-time text-text-secondary text-xs font-mono" datetime="{{ log.timestamp|date:'c' }}" data-format="datetime">{{ log.timestamp|date:"Y-m-d H:i" }}</time>
-                <a href="{% url 'trip_detail' pk=log.trip.pk %}" class="text-brand-secondary text-xs font-semibold hover:underline">
-                  {{ log.trip.title }}
-                </a>
-                {% if log.latitude and log.longitude %}
-                <button type="button" class="map-trigger text-brand-secondary hover:text-brand-primary text-xs font-mono flex items-center gap-1 cursor-pointer" 
-                        data-lat="{{ log.latitude }}" data-lng="{{ log.longitude }}" title="View on map">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                  {{ log.latitude }}°, {{ log.longitude }}°
-                </button>
-                {% endif %}
-              </div>
-              
-              {% if log.photos.all %}
-              <div class="flex flex-wrap gap-2 mt-3">
-                {% for photo in log.photos.all %}
-                <button type="button" class="block photo-trigger cursor-pointer" data-highres="{{ photo.image.url }}">
-                  <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:'Log photo' }}"
-                       class="w-32 h-24 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
-                </button>
-                {% endfor %}
-              </div>
-              {% endif %}
-
-              {% if log.tags.all %}
-              <div class="flex flex-wrap gap-1.5 mt-2">
-                {% for tag in log.tags.all %}
-                <a href="{% url 'tag_detail' tag_name=tag.name %}" class="tag-pill">#{{ tag.name }}</a>
-                {% endfor %}
-              </div>
-              {% endif %}
-            </div>
-            {% if log.wind_speed %}
-            <div class="text-right shrink-0">
-              <div class="text-text-secondary text-xs">Wind</div>
-              <div class="font-mono text-sm font-semibold">{{ log.wind_speed }} kn</div>
-            </div>
-            {% endif %}
-          </div>
-        </div>
+        {% include "logbook/partials/log_entry_card.html" with log=log is_public=False %}
         {% endfor %}
       </div>
       {% else %}

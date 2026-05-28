@@ -70,6 +70,8 @@ def twilio_webhook(request):
         # Create LogEntry
         log_entry = LogEntry(
             trip=active_trip,
+            boat=active_trip.boat,
+            author=user,
             entry_text=body,
             timestamp=timestamp,
             latitude=latitude if latitude else None,
@@ -579,6 +581,7 @@ def log_entry_create_view(request, pk):
             log_entry = LogEntry.objects.create(
                 trip=trip,
                 boat=trip.boat,
+                author=request.user,
                 entry_text=entry_text,
                 timestamp=timezone.now(),
             )
@@ -624,6 +627,7 @@ def boat_log_entry_create_view(request, pk):
             log_entry = LogEntry.objects.create(
                 trip=None,
                 boat=boat,
+                author=request.user,
                 entry_text=entry_text,
                 timestamp=timezone.now(),
             )

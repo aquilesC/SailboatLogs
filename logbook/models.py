@@ -64,6 +64,7 @@ class Tag(models.Model):
         return self.name
 
 class LogEntry(models.Model):
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='authored_logs')
     boat = models.ForeignKey(Boat, on_delete=models.CASCADE, related_name='log_entries', null=True, blank=True)
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='log_entries', null=True, blank=True)
     entry_text = models.TextField(blank=True)
