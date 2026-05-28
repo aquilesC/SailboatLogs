@@ -19,6 +19,8 @@ urlpatterns = [
     path('boats/add/', views.boat_create_view, name='boat_create'),
     path('boats/<int:pk>/', views.boat_detail_view, name='boat_detail'),
     path('boats/<int:pk>/edit/', views.boat_edit_view, name='boat_edit'),
+    path('boats/<int:pk>/log/', views.boat_log_entry_create_view, name='boat_log_entry_create'),
+    path('boats/<int:pk>/logs/', views.log_entry_list_view, name='log_entry_list'),
 
     # Trip Management
     path('trips/', views.trip_list_view, name='trip_list'),

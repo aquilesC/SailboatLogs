@@ -84,7 +84,8 @@ class LogEntry(models.Model):
         ordering = ['-timestamp']
 
     def __str__(self):
-        return f"{self.trip.title} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+        title = self.trip.title if self.trip else self.boat.name
+        return f"{title} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 
 
 class GPXFile(models.Model):

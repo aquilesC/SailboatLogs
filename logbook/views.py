@@ -228,10 +228,13 @@ def boat_detail_view(request, pk):
     crew = boat.shared_users.all()
     total_distance = trips.aggregate(total=Sum('total_distance'))['total'] or 0
 
-    # Tags used across this boat's log entries
+    # Tags used across this boat's log entries (both trip and tripless logs)
     tags = Tag.objects.filter(
-        log_entries__trip__boat=boat
+        log_entries__boat=boat
     ).annotate(entry_count=Count('log_entries')).order_by('-entry_count').distinct()
+
+    # Recent log entries
+    recent_logs = boat.log_entries.all().prefetch_related('tags', 'photos', 'trip').order_by('-timestamp')[:5]
 
     return render(request, 'logbook/boat_detail.html', {
         'boat': boat,
@@ -239,6 +242,26 @@ def boat_detail_view(request, pk):
         'crew': crew,
         'total_distance': total_distance,
         'tags': tags,
+        'recent_logs': recent_logs,
+    })
+
+
+@login_required
+def log_entry_list_view(request, pk):
+    """View a paginated list of all logs for a boat."""
+    boat = get_object_or_404(Boat, pk=pk, shared_users=request.user)
+    
+    logs_qs = boat.log_entries.all().prefetch_related('tags', 'photos', 'trip').order_by('-timestamp')
+    
+    from django.core.paginator import Paginator
+    paginator = Paginator(logs_qs, 20)  # Show 20 logs per page
+    
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'logbook/log_entry_list.html', {
+        'boat': boat,
+        'page_obj': page_obj,
     })
 
 
@@ -578,6 +601,43 @@ def log_entry_create_view(request, pk):
 
     return render(request, 'logbook/log_entry_form.html', {
         'trip': trip,
+    })
+
+
+@login_required
+def boat_log_entry_create_view(request, pk):
+    """Create a manual log entry directly on a boat, without a trip."""
+    boat = get_object_or_404(Boat, pk=pk, shared_users=request.user)
+
+    if request.method == 'POST':
+        entry_text = request.POST.get('entry_text', '').strip()
+        photos = request.FILES.getlist('photos')
+
+        if entry_text or photos:
+            log_entry = LogEntry.objects.create(
+                trip=None,
+                boat=boat,
+                entry_text=entry_text,
+                timestamp=timezone.now(),
+            )
+
+            for photo_file in photos:
+                photo_obj = LogEntryPhoto(
+                    log_entry=log_entry,
+                    image=photo_file,
+                    source='web',
+                )
+                photo_obj.save()
+
+            from django.contrib import messages
+            messages.success(request, 'Log entry added successfully.')
+            return redirect('boat_detail', pk=boat.pk)
+        else:
+            from django.contrib import messages
+            messages.error(request, 'Please provide text or at least one photo.')
+
+    return render(request, 'logbook/log_entry_form.html', {
+        'boat': boat,
     })
 
 

@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Add Log Entry — {{ trip.title }}{% endblock %}
+{% block title %}Add Log Entry{% if trip %} — {{ trip.title }}{% elif boat %} — {{ boat.name }}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-8">
   <nav class="text-sm text-text-secondary mb-4">
+    {% if trip %}
     <a href="{% url 'trip_detail' pk=trip.pk %}" class="hover:text-brand-secondary">&larr; Back to {{ trip.title }}</a>
+    {% elif boat %}
+    <a href="{% url 'boat_detail' pk=boat.pk %}" class="hover:text-brand-secondary">&larr; Back to {{ boat.name }}</a>
+    {% endif %}
   </nav>
 
   <h1>Add Log Entry</h1>

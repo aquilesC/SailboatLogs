@@ -21,7 +21,10 @@
       <p class="text-text-secondary mt-1">{{ boat.boat_model }}</p>
       {% endif %}
     </div>
-    <a href="{% url 'boat_edit' pk=boat.pk %}" class="btn-outline text-sm" id="edit-boat-btn">Edit Boat</a>
+    <div class="flex items-center gap-3">
+      <a href="{% url 'boat_log_entry_create' pk=boat.pk %}" class="btn-primary text-sm" id="add-log-btn">Add Log Entry</a>
+      <a href="{% url 'boat_edit' pk=boat.pk %}" class="btn-outline text-sm" id="edit-boat-btn">Edit Boat</a>
+    </div>
   </div>
 
   <!-- Metadata Cards -->
@@ -98,36 +101,102 @@
       <div class="space-y-3">
         {% for trip in trips %}
         <a href="{% url 'trip_detail' pk=trip.pk %}" 
-           class="card block hover:bg-bg-surface-highlight transition-colors !p-4"
-           id="trip-history-{{ trip.pk }}">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-semibold">{{ trip.title }}</div>
-              <div class="text-text-secondary text-sm mt-0.5 font-mono">
-                {{ trip.start_date|date:"Y-m-d" }}
-                {% if trip.end_date %} → {{ trip.end_date|date:"Y-m-d" }}{% endif %}
-              </div>
-            </div>
-            <div class="text-right">
-              {% if trip.is_active %}
-              <span class="badge-warning">Active</span>
+           class="card !p-4 hover:border-brand-primary/30 hover:shadow-md transition-all flex items-center justify-between group">
+          <div>
+            <h3 class="text-base text-text-primary group-hover:text-brand-primary transition-colors">{{ trip.title }}</h3>
+            <p class="text-text-secondary text-sm mt-1">
+              {{ trip.start_date|date:"M d, Y" }}
+              {% if trip.end_date %}
+                &mdash; {{ trip.end_date|date:"M d, Y" }}
               {% else %}
-              <span class="badge-success">Completed</span>
+                <span class="badge-warning ml-2">Active</span>
               {% endif %}
-            </div>
+            </p>
           </div>
-          {% if trip.total_distance %}
-          <div class="text-text-secondary text-xs mt-2 font-mono">{{ trip.total_distance|floatformat:1 }} nm</div>
-          {% endif %}
+          <svg class="w-5 h-5 text-gray-300 group-hover:text-brand-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </a>
         {% endfor %}
       </div>
       {% else %}
       <div class="card text-center !py-8">
-        <p class="text-text-secondary">No trips recorded for this boat yet.</p>
+        <p class="text-text-secondary">No trips recorded yet.</p>
+        <a href="{% url 'trip_start' %}" class="btn-primary mt-4 inline-block text-sm">Start First Trip</a>
       </div>
       {% endif %}
     </div>
+
+    <!-- Recent Logs -->
+    <div class="lg:col-span-2">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg">Recent Logs</h2>
+        {% if recent_logs %}
+        <a href="{% url 'log_entry_list' pk=boat.pk %}" class="text-brand-secondary text-sm font-medium hover:underline">View all logs &rarr;</a>
+        {% endif %}
+      </div>
+      
+      {% if recent_logs %}
+      <div class="space-y-3">
+        {% for log in recent_logs %}
+        <div class="card !p-4" id="log-entry-{{ log.pk }}">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <p class="text-text-primary whitespace-pre-wrap">{{ log.entry_text }}</p>
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                <time class="local-time text-text-secondary text-xs font-mono" datetime="{{ log.timestamp|date:'c' }}" data-format="datetime">{{ log.timestamp|date:"Y-m-d H:i" }}</time>
+                {% if log.trip %}
+                <a href="{% url 'trip_detail' pk=log.trip.pk %}" class="text-brand-secondary text-xs font-semibold hover:underline">
+                  {{ log.trip.title }}
+                </a>
+                {% endif %}
+                {% if log.latitude and log.longitude %}
+                <button type="button" class="map-trigger text-brand-secondary hover:text-brand-primary text-xs font-mono flex items-center gap-1 cursor-pointer" 
+                        data-lat="{{ log.latitude }}" data-lng="{{ log.longitude }}" title="View on map">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  {{ log.latitude }}°, {{ log.longitude }}°
+                </button>
+                {% endif %}
+              </div>
+              
+              {% if log.photos.all %}
+              <div class="flex flex-wrap gap-2 mt-3">
+                {% for photo in log.photos.all %}
+                <button type="button" class="block photo-trigger cursor-pointer" data-highres="{{ photo.image.url }}">
+                  <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:'Log photo' }}"
+                       class="w-32 h-24 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+                </button>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              {% if log.tags.all %}
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                {% for tag in log.tags.all %}
+                <a href="{% url 'tag_detail' tag_name=tag.name %}" class="tag-pill">#{{ tag.name }}</a>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            {% if log.wind_speed %}
+            <div class="text-right shrink-0">
+              <div class="text-text-secondary text-xs">Wind</div>
+              <div class="font-mono text-sm font-semibold">{{ log.wind_speed }} kn</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card !p-8 text-center text-text-secondary">
+        <p>No recent logs found.</p>
+        <a href="{% url 'boat_log_entry_create' pk=boat.pk %}" class="btn-outline mt-4 inline-block text-sm">Add First Log</a>
+      </div>
+      {% endif %}
+    </div>
+
   </div>
 </div>
+
+{% include 'logbook/partials/photo_modal.html' %}
+{% include 'logbook/partials/map_modal.html' %}
 {% endblock %}

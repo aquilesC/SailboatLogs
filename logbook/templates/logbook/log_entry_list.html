@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}All Logs — {{ boat.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-4xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <nav class="text-sm text-text-secondary">
+    <a href="{% url 'dashboard' %}" class="hover:text-brand-secondary">Dashboard</a>
+    <span class="mx-2">/</span>
+    <a href="{% url 'boat_detail' pk=boat.pk %}" class="hover:text-brand-secondary">{{ boat.name }}</a>
+    <span class="mx-2">/</span>
+    <span class="text-text-primary font-medium">Logs</span>
+  </nav>
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1>All Logs</h1>
+      <p class="text-text-secondary mt-1">Viewing all log entries for {{ boat.name }}</p>
+    </div>
+    <a href="{% url 'boat_log_entry_create' pk=boat.pk %}" class="btn-primary text-sm" id="add-log-btn">Add Log Entry</a>
+  </div>
+
+  <!-- Log Entries -->
+  {% if page_obj %}
+  <div class="space-y-4">
+    {% for log in page_obj %}
+    <div class="card !p-4" id="log-entry-{{ log.pk }}">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1 min-w-0">
+          <p class="text-text-primary whitespace-pre-wrap">{{ log.entry_text }}</p>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+            <time class="local-time text-text-secondary text-xs font-mono" datetime="{{ log.timestamp|date:'c' }}" data-format="datetime">{{ log.timestamp|date:"Y-m-d H:i" }}</time>
+            {% if log.trip %}
+            <a href="{% url 'trip_detail' pk=log.trip.pk %}" class="text-brand-secondary text-xs font-semibold hover:underline">
+              {{ log.trip.title }}
+            </a>
+            {% endif %}
+            {% if log.latitude and log.longitude %}
+            <button type="button" class="map-trigger text-brand-secondary hover:text-brand-primary text-xs font-mono flex items-center gap-1 cursor-pointer" 
+                    data-lat="{{ log.latitude }}" data-lng="{{ log.longitude }}" title="View on map">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              {{ log.latitude }}°, {{ log.longitude }}°
+            </button>
+            {% endif %}
+          </div>
+          
+          {% if log.photos.all %}
+          <div class="flex flex-wrap gap-2 mt-3">
+            {% for photo in log.photos.all %}
+            <button type="button" class="block photo-trigger cursor-pointer" data-highres="{{ photo.image.url }}">
+              <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:'Log photo' }}"
+                   class="w-32 h-24 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+            </button>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if log.tags.all %}
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            {% for tag in log.tags.all %}
+            <a href="{% url 'tag_detail' tag_name=tag.name %}" class="tag-pill">#{{ tag.name }}</a>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% if log.wind_speed %}
+        <div class="text-right shrink-0">
+          <div class="text-text-secondary text-xs">Wind</div>
+          <div class="font-mono text-sm font-semibold">{{ log.wind_speed }} kn</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination Controls -->
+  <div class="flex items-center justify-between mt-8 text-sm">
+    <div class="text-text-secondary">
+      Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </div>
+    <div class="flex items-center gap-2">
+      {% if page_obj.has_previous %}
+        <a href="?page=1" class="btn-outline !py-1 !px-2">&laquo; First</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn-outline !py-1 !px-2">Previous</a>
+      {% endif %}
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn-outline !py-1 !px-2">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}" class="btn-outline !py-1 !px-2">Last &raquo;</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card text-center !py-12">
+    <p class="text-text-secondary">No log entries found for this boat.</p>
+    <a href="{% url 'boat_log_entry_create' pk=boat.pk %}" class="btn-primary mt-4 inline-block text-sm">Add First Log</a>
+  </div>
+  {% endif %}
+
+</div>
+
+{% include 'logbook/partials/photo_modal.html' %}
+{% include 'logbook/partials/map_modal.html' %}
+{% endblock %}

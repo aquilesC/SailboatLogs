@@ -1,0 +1,72 @@
+<!-- Location Map Modal -->
+<dialog id="map-modal" class="bg-transparent border-none p-0 m-auto backdrop:bg-black/80 max-w-3xl w-full">
+  <div class="card !p-0 overflow-hidden relative shadow-2xl w-full" style="height: 60vh; min-height: 400px;">
+    <!-- Close button -->
+    <button type="button" id="map-modal-close" class="absolute top-4 right-4 z-[1000] p-2 rounded-full bg-white/90 text-gray-800 hover:bg-white shadow-md transition-colors cursor-pointer">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </button>
+    
+    <!-- Map Container -->
+    <div id="modal-map" class="w-full h-full z-0"></div>
+  </div>
+</dialog>
+
+<!-- Leaflet Setup for Modal -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('map-modal');
+    const closeBtn = document.getElementById('map-modal-close');
+    let mapInstance = null;
+    let mapMarker = null;
+
+    if (!modal) return;
+
+    // Event delegation for map trigger buttons
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('.map-trigger');
+      if (trigger) {
+        e.preventDefault();
+        const lat = parseFloat(trigger.dataset.lat);
+        const lng = parseFloat(trigger.dataset.lng);
+
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        modal.showModal();
+
+        // Initialize map if not yet created
+        if (!mapInstance) {
+          mapInstance = L.map('modal-map').setView([lat, lng], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          }).addTo(mapInstance);
+          
+          mapMarker = L.marker([lat, lng]).addTo(mapInstance);
+        } else {
+          // Update existing map
+          mapInstance.setView([lat, lng], 13);
+          mapMarker.setLatLng([lat, lng]);
+        }
+
+        // Important: Leaflet maps need invalidateSize when their container becomes visible
+        setTimeout(() => {
+          mapInstance.invalidateSize();
+        }, 10);
+      }
+    });
+
+    closeBtn.addEventListener('click', () => {
+      modal.close();
+    });
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.close();
+      }
+    });
+  });
+</script>
