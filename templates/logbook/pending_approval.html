@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Account Pending Approval — Maritime Logbook{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[60vh]">
+  <div class="card !p-12 text-center max-w-lg mx-auto">
+    <div class="mb-6 flex justify-center text-brand-primary">
+      <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+      </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-text-primary mb-4">Account Pending</h1>
+    <p class="text-text-secondary text-lg mb-8">
+      Your sign-up was successful, but this is a private expedition. Your account is currently locked and requires manual approval from the captain before you can set sail.
+    </p>
+    <p class="text-text-secondary text-md mb-8">
+      Please check back later or contact the administrator to get your account activated.
+    </p>
+    <a href="{% url 'login' %}" class="btn-primary inline-flex items-center justify-center w-full gap-2">
+      Return to Login
+    </a>
+  </div>
+</div>
+{% endblock %}

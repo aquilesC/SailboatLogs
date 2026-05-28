@@ -9,7 +9,6 @@ from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login
 from django.db.models import Q, Count, Sum
 from dateutil import parser
 import requests
@@ -64,6 +63,9 @@ def twilio_webhook(request):
         try:
             profile = Profile.objects.get(phone_number=from_number)
             user = profile.user
+            if not user.is_active:
+                logger.warning(f"Rejected webhook from inactive user: {user.username}")
+                return HttpResponse("User account is pending approval.", status=403)
         except Profile.DoesNotExist:
             return HttpResponse("User not found for this phone number.", status=404)
 
@@ -170,9 +172,11 @@ def signup_view(request):
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect("dashboard")
+            user = form.save(commit=False)
+            user.is_active = False
+            user.save()
+            # Do not log the user in; redirect to a pending approval page
+            return render(request, "logbook/pending_approval.html")
     else:
         form = UserCreationForm()
     return render(request, "logbook/signup.html", {"form": form})
