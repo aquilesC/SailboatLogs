@@ -122,12 +122,22 @@ def enrich_photo(sender, instance, created, **kwargs):
 
     # 1. Extract EXIF datetime
     try:
+        from logbook.utils import extract_exif_datetime, generate_thumbnail, resize_image
         exif_dt = extract_exif_datetime(instance.image)
         if exif_dt:
             instance.taken_at = exif_dt
             update_fields.append('taken_at')
     except Exception as e:
         logger.warning(f"Could not extract EXIF datetime for photo {instance.pk}: {e}")
+
+    # 1b. Resize the main image down to 1920px to save storage, preserving EXIF
+    try:
+        resized_file = resize_image(instance.image, max_size=1920)
+        if resized_file:
+            instance.image.save(resized_file.name, resized_file, save=False)
+            update_fields.append('image')
+    except Exception as e:
+        logger.warning(f"Could not resize original image for photo {instance.pk}: {e}")
 
     # 2. Generate thumbnail
     try:

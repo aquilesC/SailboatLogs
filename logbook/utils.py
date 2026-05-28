@@ -157,3 +157,50 @@ def generate_thumbnail(image_field, size=(150, 150)):
         except Exception:
             pass
         return None
+
+def resize_image(image_field, max_size=1920):
+    """
+    Resizes an image field to a maximum dimension, preserving EXIF.
+    Returns a ContentFile if resized, or None if no resize was needed or on error.
+    """
+    try:
+        image_field.open('rb')
+        img = Image.open(image_field.file)
+        exif_dict = img.info.get('exif')
+        
+        # Check if we need to resize
+        width, height = img.size
+        if width <= max_size and height <= max_size:
+            image_field.close()
+            return None
+            
+        # Calculate new dimensions
+        if width > height:
+            new_height = int((height * max_size) / width)
+            new_width = max_size
+        else:
+            new_width = int((width * max_size) / height)
+            new_height = max_size
+            
+        img = img.resize((new_width, new_height), Image.LANCZOS)
+        
+        # Save to buffer
+        buf = BytesIO()
+        if exif_dict:
+            img.save(buf, format='JPEG', quality=85, optimize=True, exif=exif_dict)
+        else:
+            img.save(buf, format='JPEG', quality=85, optimize=True)
+            
+        buf.seek(0)
+        image_field.close()
+        
+        original_name = os.path.basename(image_field.name)
+        return ContentFile(buf.read(), name=original_name)
+
+    except Exception as e:
+        logger.warning(f"Error resizing original image: {e}")
+        try:
+            image_field.close()
+        except Exception:
+            pass
+        return None

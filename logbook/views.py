@@ -560,27 +560,13 @@ def log_entry_create_view(request, pk):
                 timestamp=timezone.now(),
             )
 
-            from datetime import datetime
             for photo_file in photos:
-                # The JS frontend might send the original file's lastModified timestamp
-                # since EXIF is lost during canvas resizing
-                taken_at_ms = request.POST.get(f'taken_at_{photo_file.name}')
-                taken_at_dt = None
-                if taken_at_ms and taken_at_ms.isdigit():
-                    try:
-                        taken_at_dt = timezone.make_aware(datetime.fromtimestamp(int(taken_at_ms) / 1000.0))
-                    except (ValueError, OSError):
-                        pass
-
                 photo_obj = LogEntryPhoto(
                     log_entry=log_entry,
                     image=photo_file,
                     source='web',
                 )
-                # Set taken_at if provided by JS; otherwise the post_save signal might try to extract EXIF
-                if taken_at_dt:
-                    photo_obj.taken_at = taken_at_dt
-                
+                # The post_save signal will handle EXIF extraction and resizing
                 photo_obj.save()
 
             from django.contrib import messages
