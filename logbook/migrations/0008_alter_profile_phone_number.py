@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('logbook', '0007_logentryphoto_taken_at_logentryphoto_thumbnail'),
+        ("logbook", "0007_logentryphoto_taken_at_logentryphoto_thumbnail"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='profile',
-            name='phone_number',
-            field=models.CharField(blank=True, help_text='Phone number for Twilio WhatsApp matching (e.g., +1234567890)', max_length=50, unique=True),
+            model_name="profile",
+            name="phone_number",
+            field=models.CharField(
+                blank=True,
+                help_text="Phone number for Twilio WhatsApp matching (e.g., +1234567890)",
+                max_length=50,
+                unique=True,
+            ),
         ),
     ]

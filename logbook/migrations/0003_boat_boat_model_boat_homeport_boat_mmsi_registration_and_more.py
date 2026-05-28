@@ -6,29 +6,41 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('logbook', '0002_logentry_boat_alter_logentry_trip'),
+        ("logbook", "0002_logentry_boat_alter_logentry_trip"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='boat',
-            name='boat_model',
-            field=models.CharField(blank=True, help_text='Boat model (e.g., Beneteau Oceanis 38.1)', max_length=255),
+            model_name="boat",
+            name="boat_model",
+            field=models.CharField(
+                blank=True,
+                help_text="Boat model (e.g., Beneteau Oceanis 38.1)",
+                max_length=255,
+            ),
         ),
         migrations.AddField(
-            model_name='boat',
-            name='homeport',
-            field=models.CharField(blank=True, help_text='Home port / marina', max_length=255),
+            model_name="boat",
+            name="homeport",
+            field=models.CharField(
+                blank=True, help_text="Home port / marina", max_length=255
+            ),
         ),
         migrations.AddField(
-            model_name='boat',
-            name='mmsi_registration',
-            field=models.CharField(blank=True, help_text='MMSI number or registration ID', max_length=100),
+            model_name="boat",
+            name="mmsi_registration",
+            field=models.CharField(
+                blank=True, help_text="MMSI number or registration ID", max_length=100
+            ),
         ),
         # Add share_slug WITHOUT unique=True first, so existing rows get ""
         migrations.AddField(
-            model_name='trip',
-            name='share_slug',
-            field=models.SlugField(blank=True, default='', help_text='Randomized slug for public sharing links'),
+            model_name="trip",
+            name="share_slug",
+            field=models.SlugField(
+                blank=True,
+                default="",
+                help_text="Randomized slug for public sharing links",
+            ),
         ),
     ]

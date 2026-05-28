@@ -7,44 +7,105 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('logbook', '0005_trip_share_slug_unique'),
+        ("logbook", "0005_trip_share_slug_unique"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='logentry',
-            name='entry_text',
+            model_name="logentry",
+            name="entry_text",
             field=models.TextField(blank=True),
         ),
         migrations.CreateModel(
-            name='GPXFile',
+            name="GPXFile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to='gpx_files/')),
-                ('original_filename', models.CharField(blank=True, max_length=255)),
-                ('uploaded_at', models.DateTimeField(auto_now_add=True)),
-                ('source', models.CharField(choices=[('web', 'Web Upload'), ('whatsapp', 'WhatsApp')], default='web', max_length=20)),
-                ('track_points', models.JSONField(blank=True, default=list, help_text='Parsed [[lat, lng], ...] array')),
-                ('distance_nm', models.FloatField(blank=True, help_text='Distance in nautical miles', null=True)),
-                ('max_speed_kn', models.FloatField(blank=True, help_text='Max speed in knots', null=True)),
-                ('trip', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='gpx_files', to='logbook.trip')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("file", models.FileField(upload_to="gpx_files/")),
+                ("original_filename", models.CharField(blank=True, max_length=255)),
+                ("uploaded_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "source",
+                    models.CharField(
+                        choices=[("web", "Web Upload"), ("whatsapp", "WhatsApp")],
+                        default="web",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "track_points",
+                    models.JSONField(
+                        blank=True,
+                        default=list,
+                        help_text="Parsed [[lat, lng], ...] array",
+                    ),
+                ),
+                (
+                    "distance_nm",
+                    models.FloatField(
+                        blank=True, help_text="Distance in nautical miles", null=True
+                    ),
+                ),
+                (
+                    "max_speed_kn",
+                    models.FloatField(
+                        blank=True, help_text="Max speed in knots", null=True
+                    ),
+                ),
+                (
+                    "trip",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="gpx_files",
+                        to="logbook.trip",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-uploaded_at'],
+                "ordering": ["-uploaded_at"],
             },
         ),
         migrations.CreateModel(
-            name='LogEntryPhoto',
+            name="LogEntryPhoto",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('image', models.ImageField(upload_to='log_photos/%Y/%m/')),
-                ('caption', models.CharField(blank=True, max_length=255)),
-                ('uploaded_at', models.DateTimeField(auto_now_add=True)),
-                ('source', models.CharField(choices=[('web', 'Web Upload'), ('whatsapp', 'WhatsApp')], default='web', max_length=20)),
-                ('log_entry', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='photos', to='logbook.logentry')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("image", models.ImageField(upload_to="log_photos/%Y/%m/")),
+                ("caption", models.CharField(blank=True, max_length=255)),
+                ("uploaded_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "source",
+                    models.CharField(
+                        choices=[("web", "Web Upload"), ("whatsapp", "WhatsApp")],
+                        default="web",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "log_entry",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="photos",
+                        to="logbook.logentry",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['uploaded_at'],
+                "ordering": ["uploaded_at"],
             },
         ),
     ]

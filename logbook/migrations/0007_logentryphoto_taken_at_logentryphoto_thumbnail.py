@@ -7,18 +7,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('logbook', '0006_alter_logentry_entry_text_gpxfile_logentryphoto'),
+        ("logbook", "0006_alter_logentry_entry_text_gpxfile_logentryphoto"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='logentryphoto',
-            name='taken_at',
-            field=models.DateTimeField(blank=True, help_text='Photo capture time from EXIF, falls back to log entry timestamp', null=True),
+            model_name="logentryphoto",
+            name="taken_at",
+            field=models.DateTimeField(
+                blank=True,
+                help_text="Photo capture time from EXIF, falls back to log entry timestamp",
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='logentryphoto',
-            name='thumbnail',
-            field=models.ImageField(blank=True, help_text='Auto-generated 150px thumbnail for map markers', upload_to=logbook.models._photo_thumbnail_path),
+            model_name="logentryphoto",
+            name="thumbnail",
+            field=models.ImageField(
+                blank=True,
+                help_text="Auto-generated 150px thumbnail for map markers",
+                upload_to=logbook.models._photo_thumbnail_path,
+            ),
         ),
     ]

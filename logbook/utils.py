@@ -10,6 +10,7 @@ from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
 
+
 def fetch_weather_from_open_meteo(latitude, longitude):
     """
     Fetches current weather from Open-Meteo API based on coordinates.
@@ -19,18 +20,14 @@ def fetch_weather_from_open_meteo(latitude, longitude):
         # Open-Meteo requires coordinates as floats
         lat = float(latitude)
         lon = float(longitude)
-        
+
         url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": lat,
-            "longitude": lon,
-            "current_weather": "true"
-        }
-        
+        params = {"latitude": lat, "longitude": lon, "current_weather": "true"}
+
         response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
-        
+
         if "current_weather" in data:
             current = data["current_weather"]
             return {
@@ -53,7 +50,7 @@ def extract_exif_datetime(image_field):
     Returns a timezone-aware datetime or None.
     """
     try:
-        image_field.open('rb')
+        image_field.open("rb")
         img = Image.open(image_field.file)
         exif_data = img.getexif()
         image_field.close()
@@ -76,7 +73,9 @@ def extract_exif_datetime(image_field):
             offset_str = exif_ifd.get(ExifBase.OffsetTimeDigitized)
         elif exif_data.get(ExifBase.DateTime):
             dt_str = exif_data[ExifBase.DateTime]
-            offset_str = exif_ifd.get(ExifBase.OffsetTime) or exif_data.get(ExifBase.OffsetTime)
+            offset_str = exif_ifd.get(ExifBase.OffsetTime) or exif_data.get(
+                ExifBase.OffsetTime
+            )
 
         if not dt_str:
             return None
@@ -87,11 +86,13 @@ def extract_exif_datetime(image_field):
         # Apply timezone offset if available (format: "+02:00" or "-05:00")
         if offset_str:
             try:
-                sign = 1 if offset_str[0] == '+' else -1
-                parts = offset_str[1:].split(':')
+                sign = 1 if offset_str[0] == "+" else -1
+                parts = offset_str[1:].split(":")
                 offset_hours = int(parts[0])
                 offset_minutes = int(parts[1]) if len(parts) > 1 else 0
-                tz = timezone(timedelta(hours=sign * offset_hours, minutes=sign * offset_minutes))
+                tz = timezone(
+                    timedelta(hours=sign * offset_hours, minutes=sign * offset_minutes)
+                )
                 dt = dt.replace(tzinfo=tz)
             except (ValueError, IndexError):
                 # Fall back to UTC if offset parsing fails
@@ -114,19 +115,20 @@ def generate_thumbnail(image_field, size=(150, 150)):
     Returns a ContentFile ready to be saved, or None on failure.
     """
     try:
-        image_field.open('rb')
+        image_field.open("rb")
         img = Image.open(image_field.file)
 
         # Handle EXIF orientation
         try:
             from PIL import ImageOps
+
             img = ImageOps.exif_transpose(img)
         except Exception:
             pass
 
         # Convert to RGB if necessary (e.g., RGBA PNGs)
-        if img.mode not in ('RGB', 'L'):
-            img = img.convert('RGB')
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
 
         # Center-crop to square, then resize
         width, height = img.size
@@ -138,7 +140,7 @@ def generate_thumbnail(image_field, size=(150, 150)):
 
         # Save to buffer
         buf = BytesIO()
-        img.save(buf, format='JPEG', quality=80, optimize=True)
+        img.save(buf, format="JPEG", quality=80, optimize=True)
         buf.seek(0)
 
         image_field.close()
@@ -158,22 +160,23 @@ def generate_thumbnail(image_field, size=(150, 150)):
             pass
         return None
 
+
 def resize_image(image_field, max_size=1920):
     """
     Resizes an image field to a maximum dimension, preserving EXIF.
     Returns a ContentFile if resized, or None if no resize was needed or on error.
     """
     try:
-        image_field.open('rb')
+        image_field.open("rb")
         img = Image.open(image_field.file)
-        exif_dict = img.info.get('exif')
-        
+        exif_dict = img.info.get("exif")
+
         # Check if we need to resize
         width, height = img.size
         if width <= max_size and height <= max_size:
             image_field.close()
             return None
-            
+
         # Calculate new dimensions
         if width > height:
             new_height = int((height * max_size) / width)
@@ -181,19 +184,19 @@ def resize_image(image_field, max_size=1920):
         else:
             new_width = int((width * max_size) / height)
             new_height = max_size
-            
+
         img = img.resize((new_width, new_height), Image.LANCZOS)
-        
+
         # Save to buffer
         buf = BytesIO()
         if exif_dict:
-            img.save(buf, format='JPEG', quality=85, optimize=True, exif=exif_dict)
+            img.save(buf, format="JPEG", quality=85, optimize=True, exif=exif_dict)
         else:
-            img.save(buf, format='JPEG', quality=85, optimize=True)
-            
+            img.save(buf, format="JPEG", quality=85, optimize=True)
+
         buf.seek(0)
         image_field.close()
-        
+
         original_name = os.path.basename(image_field.name)
         return ContentFile(buf.read(), name=original_name)
 

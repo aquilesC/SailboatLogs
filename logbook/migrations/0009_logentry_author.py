@@ -8,14 +8,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('logbook', '0008_alter_profile_phone_number'),
+        ("logbook", "0008_alter_profile_phone_number"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='logentry',
-            name='author',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='authored_logs', to=settings.AUTH_USER_MODEL),
+            model_name="logentry",
+            name="author",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="authored_logs",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

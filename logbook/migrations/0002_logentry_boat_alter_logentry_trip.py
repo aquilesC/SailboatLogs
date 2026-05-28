@@ -7,18 +7,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('logbook', '0001_initial'),
+        ("logbook", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='logentry',
-            name='boat',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='log_entries', to='logbook.boat'),
+            model_name="logentry",
+            name="boat",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="log_entries",
+                to="logbook.boat",
+            ),
         ),
         migrations.AlterField(
-            model_name='logentry',
-            name='trip',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='log_entries', to='logbook.trip'),
+            model_name="logentry",
+            name="trip",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="log_entries",
+                to="logbook.trip",
+            ),
         ),
     ]
