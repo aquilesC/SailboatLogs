@@ -77,13 +77,17 @@ def twilio_webhook(request):
             .first()
         )
 
-        if not active_trip:
-            return HttpResponse("No active trip found for this user.", status=404)
+        if active_trip:
+            target_boat = active_trip.boat
+        else:
+            target_boat = Boat.objects.filter(shared_users=user).order_by("-pk").first()
+            if not target_boat:
+                return HttpResponse("No boats found for this user.", status=404)
 
         # Create LogEntry
         log_entry = LogEntry(
             trip=active_trip,
-            boat=active_trip.boat,
+            boat=target_boat,
             author=user,
             entry_text=body,
             timestamp=timestamp,
