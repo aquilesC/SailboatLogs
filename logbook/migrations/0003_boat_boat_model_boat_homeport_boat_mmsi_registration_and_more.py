@@ -25,9 +25,10 @@ class Migration(migrations.Migration):
             name='mmsi_registration',
             field=models.CharField(blank=True, help_text='MMSI number or registration ID', max_length=100),
         ),
+        # Add share_slug WITHOUT unique=True first, so existing rows get ""
         migrations.AddField(
             model_name='trip',
             name='share_slug',
-            field=models.SlugField(blank=True, help_text='Randomized slug for public sharing links', unique=True),
+            field=models.SlugField(blank=True, default='', help_text='Randomized slug for public sharing links'),
         ),
     ]
