@@ -32,15 +32,24 @@ TWILIO_AUTH_TOKEN = _secrets.get("TWILIO_AUTH_TOKEN", "")
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-)s&9qip#wh#+1h!u3&q#sxlgoyaul#wn!bzeyeqi@8wk3wr$*f"
+SECRET_KEY = _secrets.get(
+    "SECRET_KEY", "django-insecure-)s&9qip#wh#+1h!u3&q#sxlgoyaul#wn!bzeyeqi@8wk3wr$*f"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _secrets.get("DEBUG", True)
 
 ALLOWED_HOSTS = [
     "localhost",
     "aquilesc.pythonanywhere.com",
 ]
+
+# HTTPS & Secure Cookies (Enabled in Production)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
 
 
 # Application definition

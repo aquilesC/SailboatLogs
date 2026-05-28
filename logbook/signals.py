@@ -41,10 +41,12 @@ def enrich_log_entry_weather(sender, instance, created, **kwargs):
 @receiver(post_save, sender=GPXFile)
 def parse_gpx_file(sender, instance, created, **kwargs):
     """Parse a GPXFile on creation: extract track points, distance, and speed."""
+    print(f"SIGNAL FIRED: created={created}, file={instance.file}")
     if not created:
         return
 
     if not instance.file:
+        print("NO FILE")
         return
 
     try:

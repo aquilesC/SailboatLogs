@@ -13,6 +13,7 @@ from django.contrib.auth import login
 from django.db.models import Q, Count, Sum
 from dateutil import parser
 import requests
+from twilio.request_validator import RequestValidator
 from .models import Profile, Boat, Trip, Tag, LogEntry, GPXFile, LogEntryPhoto
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,15 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def twilio_webhook(request):
     if request.method == "POST":
+        # Validate Twilio signature if the auth token is configured
+        if settings.TWILIO_AUTH_TOKEN:
+            validator = RequestValidator(settings.TWILIO_AUTH_TOKEN)
+            signature = request.headers.get("X-Twilio-Signature", "")
+            url = request.build_absolute_uri()
+            if not validator.validate(url, request.POST, signature):
+                logger.warning("Invalid Twilio signature received.")
+                return HttpResponse("Invalid signature.", status=403)
+
         # Twilio sends data as form-urlencoded
         from_number = request.POST.get("From", "")
         body = request.POST.get("Body", "")
