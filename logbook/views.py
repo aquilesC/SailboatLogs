@@ -542,6 +542,59 @@ def trip_end_view(request, pk):
         return redirect(next_url)
     return redirect('trip_detail', pk=pk)
 
+
+@login_required
+def log_entry_create_view(request, pk):
+    """Create a manual log entry and upload photos."""
+    trip = get_object_or_404(Trip, pk=pk, boat__shared_users=request.user)
+
+    if request.method == 'POST':
+        entry_text = request.POST.get('entry_text', '').strip()
+        photos = request.FILES.getlist('photos')
+
+        if entry_text or photos:
+            log_entry = LogEntry.objects.create(
+                trip=trip,
+                boat=trip.boat,
+                entry_text=entry_text,
+                timestamp=timezone.now(),
+            )
+
+            from datetime import datetime
+            for photo_file in photos:
+                # The JS frontend might send the original file's lastModified timestamp
+                # since EXIF is lost during canvas resizing
+                taken_at_ms = request.POST.get(f'taken_at_{photo_file.name}')
+                taken_at_dt = None
+                if taken_at_ms and taken_at_ms.isdigit():
+                    try:
+                        taken_at_dt = timezone.make_aware(datetime.fromtimestamp(int(taken_at_ms) / 1000.0))
+                    except (ValueError, OSError):
+                        pass
+
+                photo_obj = LogEntryPhoto(
+                    log_entry=log_entry,
+                    image=photo_file,
+                    source='web',
+                )
+                # Set taken_at if provided by JS; otherwise the post_save signal might try to extract EXIF
+                if taken_at_dt:
+                    photo_obj.taken_at = taken_at_dt
+                
+                photo_obj.save()
+
+            from django.contrib import messages
+            messages.success(request, 'Log entry added successfully.')
+            return redirect('trip_detail', pk=trip.pk)
+        else:
+            from django.contrib import messages
+            messages.error(request, 'Please provide text or at least one photo.')
+
+    return render(request, 'logbook/log_entry_form.html', {
+        'trip': trip,
+    })
+
+
 def trip_public_view(request, share_slug):
     trip = get_object_or_404(Trip, share_slug=share_slug)
     log_entries = trip.log_entries.all().order_by('-timestamp').prefetch_related('tags', 'photos')
