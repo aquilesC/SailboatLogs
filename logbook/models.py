@@ -45,7 +45,8 @@ class Tag(models.Model):
         return self.name
 
 class LogEntry(models.Model):
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='log_entries')
+    boat = models.ForeignKey(Boat, on_delete=models.CASCADE, related_name='log_entries', null=True, blank=True)
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='log_entries', null=True, blank=True)
     entry_text = models.TextField()
     timestamp = models.DateTimeField(help_text="Parsed from Twilio payload")
     
