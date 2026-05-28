@@ -5,4 +5,4 @@ class LogbookConfig(AppConfig):
     name = "logbook"
 
     def ready(self):
-        pass
+        import logbook.signals  # noqa
