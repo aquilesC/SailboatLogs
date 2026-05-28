@@ -15,6 +15,29 @@
 
   <h1>Start a New Trip</h1>
 
+  {% if active_trip %}
+  <!-- Active Trip Warning -->
+  <div class="card border-l-4 border-l-status-warning" id="active-trip-warning">
+    <div class="flex items-start gap-3">
+      <svg class="w-6 h-6 text-status-warning shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+      <div>
+        <h3 class="text-status-warning mb-1">Active Trip in Progress</h3>
+        <p class="text-text-secondary text-sm">
+          You already have an active trip: <strong>{{ active_trip.title }}</strong>
+          on <strong>{{ active_trip.boat.name }}</strong>
+          (started {{ active_trip.start_date|date:"M d, Y" }}).
+        </p>
+        <p class="text-text-secondary text-sm mt-2">
+          To start a new trip, you must end the current one first. Fill in the form below
+          and check the confirmation box to end your current trip and start a new one.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {% if boats %}
   <form method="post" class="card space-y-6" id="trip-start-form">
     {% csrf_token %}
@@ -35,13 +58,26 @@
              class="form-input" placeholder="e.g., Barcelona to Mallorca">
     </div>
 
+    {% if active_trip %}
+    <div class="p-4 rounded-lg bg-status-warning/10 border border-status-warning/20">
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" name="end_active_trip" value="1" required
+               class="mt-1 w-4 h-4 accent-status-warning" id="end-active-trip-checkbox">
+        <span class="text-sm text-text-primary">
+          End the active trip "<strong>{{ active_trip.title }}</strong>" and start a new one.
+          The end date will be set to today.
+        </span>
+      </label>
+    </div>
+    {% endif %}
+
     <div class="pt-2">
       <button type="submit" class="btn-primary" id="trip-start-submit">
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        Start Trip
+        {% if active_trip %}End Current &amp; Start New Trip{% else %}Start Trip{% endif %}
       </button>
     </div>
   </form>

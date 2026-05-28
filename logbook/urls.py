@@ -8,6 +8,9 @@ urlpatterns = [
     # Authentication
     path('accounts/signup/', views.signup_view, name='signup'),
 
+    # Profile
+    path('profile/', views.profile_view, name='profile'),
+
     # Dashboard
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('', views.dashboard_view, name='home'),

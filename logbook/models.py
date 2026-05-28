@@ -7,7 +7,8 @@ from django.utils.text import slugify
 
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    phone_number = models.CharField(max_length=50, unique=True, help_text="Phone number for Twilio WhatsApp matching (e.g., +1234567890)")
+    phone_number = models.CharField(max_length=50, unique=True, blank=True,
+                                    help_text="Phone number for Twilio WhatsApp matching (e.g., +1234567890)")
 
     def __str__(self):
         return f"{self.user.username} Profile"

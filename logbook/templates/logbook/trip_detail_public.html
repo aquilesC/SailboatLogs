@@ -88,7 +88,7 @@
                 {% if entry.tags.all %}
                 <div class="flex flex-wrap gap-1.5 mt-2">
                   {% for tag in entry.tags.all %}
-                  <span class="tag-pill">#{{ tag.name }}</span>
+                  <a href="{% url 'tag_detail' tag_name=tag.name %}" class="tag-pill">#{{ tag.name }}</a>
                   {% endfor %}
                 </div>
                 {% endif %}

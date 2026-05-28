@@ -157,6 +157,36 @@ def signup_view(request):
         form = UserCreationForm()
     return render(request, 'logbook/signup.html', {'form': form})
 
+# ═══════════════════════════════════════════
+# Profile
+# ═══════════════════════════════════════════
+
+@login_required
+def profile_view(request):
+    user = request.user
+    # Get or create profile
+    profile, _ = Profile.objects.get_or_create(user=user, defaults={'phone_number': ''})
+
+    if request.method == 'POST':
+        from django.contrib import messages
+
+        # Update user fields
+        user.first_name = request.POST.get('first_name', '').strip()
+        user.last_name = request.POST.get('last_name', '').strip()
+        user.email = request.POST.get('email', '').strip()
+        user.save(update_fields=['first_name', 'last_name', 'email'])
+
+        # Update profile fields
+        profile.phone_number = request.POST.get('phone_number', '').strip()
+        profile.save(update_fields=['phone_number'])
+
+        messages.success(request, 'Profile updated successfully.')
+        return redirect('profile')
+
+    return render(request, 'logbook/profile.html', {
+        'profile': profile,
+    })
+
 
 # ═══════════════════════════════════════════
 # Dashboard
@@ -174,10 +204,16 @@ def dashboard_view(request):
         trip__boat__shared_users=user
     ).select_related('trip', 'trip__boat').order_by('-timestamp')[:10]
 
+    # Tags used across this user's log entries
+    tags = Tag.objects.filter(
+        log_entries__trip__boat__shared_users=user
+    ).annotate(entry_count=Count('log_entries')).order_by('-entry_count').distinct()
+
     return render(request, 'logbook/dashboard.html', {
         'boats': boats,
         'active_trip': active_trip,
         'recent_logs': recent_logs,
+        'tags': tags,
     })
 
 
@@ -192,11 +228,17 @@ def boat_detail_view(request, pk):
     crew = boat.shared_users.all()
     total_distance = trips.aggregate(total=Sum('total_distance'))['total'] or 0
 
+    # Tags used across this boat's log entries
+    tags = Tag.objects.filter(
+        log_entries__trip__boat=boat
+    ).annotate(entry_count=Count('log_entries')).order_by('-entry_count').distinct()
+
     return render(request, 'logbook/boat_detail.html', {
         'boat': boat,
         'trips': trips,
         'crew': crew,
         'total_distance': total_distance,
+        'tags': tags,
     })
 
 
@@ -447,9 +489,26 @@ def trip_detail_view(request, pk):
 @login_required
 def trip_start_view(request):
     boats = Boat.objects.filter(shared_users=request.user)
+    active_trip = Trip.objects.filter(
+        boat__shared_users=request.user,
+        is_active=True,
+    ).select_related('boat').first()
 
     if request.method == 'POST':
         boat = get_object_or_404(Boat, pk=request.POST.get('boat'), shared_users=request.user)
+
+        # If there's an active trip and user chose to end it
+        if active_trip and 'end_active_trip' in request.POST:
+            active_trip.is_active = False
+            active_trip.end_date = timezone.now().date()
+            active_trip.save(update_fields=['is_active', 'end_date'])
+
+        # If there's still an active trip and user didn't confirm ending it, reject
+        if active_trip and 'end_active_trip' not in request.POST:
+            from django.contrib import messages
+            messages.warning(request, 'You must end your current active trip before starting a new one.')
+            return redirect('trip_start')
+
         trip = Trip.objects.create(
             boat=boat,
             title=request.POST.get('title', ''),
@@ -460,6 +519,7 @@ def trip_start_view(request):
 
     return render(request, 'logbook/trip_form.html', {
         'boats': boats,
+        'active_trip': active_trip,
     })
 
 

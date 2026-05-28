@@ -77,6 +77,23 @@
         <a href="{% url 'boat_create' %}" class="btn-secondary text-sm" id="add-first-boat">Add Your First Boat</a>
       </div>
       {% endif %}
+
+      <!-- Tags -->
+      {% if tags %}
+      <div class="mt-6">
+        <h2 class="text-lg mb-4">Tags</h2>
+        <div class="card">
+          <div class="flex flex-wrap gap-2">
+            {% for tag in tags %}
+            <a href="{% url 'tag_detail' tag_name=tag.name %}" class="tag-pill" id="dashboard-tag-{{ tag.name }}">
+              #{{ tag.name }}
+              <span class="ml-1 text-brand-primary/50 text-[10px]">{{ tag.entry_count }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
 
     <!-- Recent Log Entries -->

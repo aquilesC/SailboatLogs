@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — Maritime Logbook{% endblock %}
+{% block meta_description %}Manage your profile settings and contact information.{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-8">
+
+  <!-- Breadcrumb -->
+  <nav class="text-sm text-text-secondary">
+    <a href="{% url 'dashboard' %}" class="hover:text-brand-secondary">Dashboard</a>
+    <span class="mx-2">/</span>
+    <span class="text-text-primary font-medium">Profile</span>
+  </nav>
+
+  <div class="flex items-center gap-4">
+    <div class="w-16 h-16 rounded-full bg-brand-primary flex items-center justify-center text-text-inverse text-2xl font-bold">
+      {{ user.username|first|upper }}
+    </div>
+    <div>
+      <h1>{{ user.username }}</h1>
+      <p class="text-text-secondary text-sm mt-0.5">Manage your account details</p>
+    </div>
+  </div>
+
+  <form method="post" class="card space-y-6" id="profile-form">
+    {% csrf_token %}
+
+    <h2 class="text-lg">Personal Information</h2>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="id_first_name" class="form-label">First Name</label>
+        <input type="text" name="first_name" id="id_first_name"
+               value="{{ user.first_name }}"
+               class="form-input" placeholder="Your first name">
+      </div>
+      <div>
+        <label for="id_last_name" class="form-label">Last Name</label>
+        <input type="text" name="last_name" id="id_last_name"
+               value="{{ user.last_name }}"
+               class="form-input" placeholder="Your last name">
+      </div>
+    </div>
+
+    <div>
+      <label for="id_email" class="form-label">Email Address</label>
+      <input type="email" name="email" id="id_email"
+             value="{{ user.email }}"
+             class="form-input" placeholder="you@example.com">
+    </div>
+
+    <hr class="border-gray-100">
+
+    <h2 class="text-lg">WhatsApp Integration</h2>
+
+    <div>
+      <label for="id_phone_number" class="form-label">Phone Number</label>
+      <input type="tel" name="phone_number" id="id_phone_number"
+             value="{{ profile.phone_number }}"
+             class="form-input" placeholder="+1234567890">
+      <p class="text-text-secondary text-xs mt-1.5">
+        This phone number is used to match incoming WhatsApp messages to your account.
+        Include the country code (e.g., +31, +1, +34).
+      </p>
+    </div>
+
+    <div class="pt-2">
+      <button type="submit" class="btn-primary" id="profile-save">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+        Save Changes
+      </button>
+    </div>
+  </form>
+
+  <!-- Account Info (read-only) -->
+  <div class="card">
+    <h2 class="text-lg mb-4">Account</h2>
+    <div class="space-y-3">
+      <div class="flex justify-between items-center py-2 border-b border-gray-50">
+        <span class="text-text-secondary text-sm">Username</span>
+        <span class="font-mono text-sm">{{ user.username }}</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-gray-50">
+        <span class="text-text-secondary text-sm">Member since</span>
+        <span class="font-mono text-sm">{{ user.date_joined|date:"M d, Y" }}</span>
+      </div>
+      <div class="flex justify-between items-center py-2">
+        <span class="text-text-secondary text-sm">Boats</span>
+        <span class="font-mono text-sm">{{ user.shared_boats.count }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -46,8 +46,11 @@
 
         <!-- User Menu -->
         <div class="flex items-center gap-4">
-          <span class="text-text-inverse/60 text-sm hidden sm:inline">{{ user.username }}</span>
-          <a href="{% url 'logout' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-logout">Log Out</a>
+          <a href="{% url 'profile' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-profile">{{ user.username }}</a>
+          <form method="post" action="{% url 'logout' %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium cursor-pointer" id="nav-logout">Log Out</button>
+          </form>
         </div>
         {% else %}
         <div class="flex items-center gap-4">
@@ -72,7 +75,11 @@
         <a href="{% url 'dashboard' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Dashboard</a>
         <a href="{% url 'trip_list' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Trips</a>
         <a href="{% url 'trip_start' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Start Trip</a>
-        <a href="{% url 'logout' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Log Out</a>
+        <a href="{% url 'profile' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Profile</a>
+        <form method="post" action="{% url 'logout' %}" class="block">
+          {% csrf_token %}
+          <button type="submit" class="py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium cursor-pointer">Log Out</button>
+        </form>
       </div>
       {% endif %}
     </div>
