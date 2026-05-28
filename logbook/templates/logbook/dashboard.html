@@ -126,6 +126,18 @@
                 <span class="text-text-secondary text-xs font-mono">{{ log.latitude }}°, {{ log.longitude }}°</span>
                 {% endif %}
               </div>
+              
+              {% if log.photos.all %}
+              <div class="flex flex-wrap gap-2 mt-3">
+                {% for photo in log.photos.all %}
+                <button type="button" class="block photo-trigger cursor-pointer" data-highres="{{ photo.image.url }}">
+                  <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:'Log photo' }}"
+                       class="w-32 h-24 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+                </button>
+                {% endfor %}
+              </div>
+              {% endif %}
+
               {% if log.tags.all %}
               <div class="flex flex-wrap gap-1.5 mt-2">
                 {% for tag in log.tags.all %}
@@ -145,11 +157,13 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="card text-center !py-12">
-        <p class="text-text-secondary">No log entries yet. Start a trip and send your first WhatsApp message!</p>
+      <div class="card !p-8 text-center text-text-secondary">
+        <p>No recent logs found.</p>
       </div>
       {% endif %}
     </div>
   </div>
 </div>
+
+{% include 'logbook/partials/photo_modal.html' %}
 {% endblock %}

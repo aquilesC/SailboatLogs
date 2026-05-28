@@ -202,7 +202,7 @@ def dashboard_view(request):
     ).select_related('boat').first()
     recent_logs = LogEntry.objects.filter(
         trip__boat__shared_users=user
-    ).select_related('trip', 'trip__boat').order_by('-timestamp')[:10]
+    ).select_related('trip', 'trip__boat').prefetch_related('tags', 'photos').order_by('-timestamp')[:10]
 
     # Tags used across this user's log entries
     tags = Tag.objects.filter(
@@ -606,7 +606,7 @@ def tag_detail_view(request, tag_name):
     tag = get_object_or_404(Tag, name=tag_name.lower())
     log_entries = tag.log_entries.all().select_related(
         'trip', 'trip__boat'
-    ).order_by('-timestamp')
+    ).prefetch_related('tags', 'photos').order_by('-timestamp')
 
     return render(request, 'logbook/tag_detail.html', {
         'tag': tag,

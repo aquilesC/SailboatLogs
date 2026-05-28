@@ -1,0 +1,84 @@
+<!-- Photo Gallery Modal -->
+<dialog id="photo-modal" class="bg-transparent border-none p-0 m-auto backdrop:bg-black/80 max-w-5xl w-full h-full flex flex-col justify-center items-center">
+  <form method="dialog" class="relative group w-full h-full flex items-center justify-center">
+    <!-- Close button -->
+    <button value="cancel" class="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors backdrop-blur-sm cursor-pointer">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </button>
+
+    <!-- Navigation Arrows -->
+    <button type="button" id="modal-prev" class="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors backdrop-blur-sm opacity-0 group-hover:opacity-100 cursor-pointer">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+    </button>
+
+    <button type="button" id="modal-next" class="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors backdrop-blur-sm opacity-0 group-hover:opacity-100 cursor-pointer">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+    </button>
+
+    <!-- Image Container -->
+    <div class="flex items-center justify-center p-4 h-full w-full">
+      <img id="modal-img" src="" alt="Full size photo" class="max-w-full max-h-full object-contain rounded shadow-2xl">
+    </div>
+  </form>
+</dialog>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('photo-modal');
+    if (!modal) return;
+    
+    const modalImg = document.getElementById('modal-img');
+    const prevBtn = document.getElementById('modal-prev');
+    const nextBtn = document.getElementById('modal-next');
+    
+    let currentIndex = 0;
+    let currentTriggers = [];
+
+    function showPhoto(index) {
+      if (currentTriggers.length === 0) return;
+      if (index < 0) index = currentTriggers.length - 1;
+      if (index >= currentTriggers.length) index = 0;
+      currentIndex = index;
+      modalImg.src = currentTriggers[currentIndex].dataset.highres;
+    }
+
+    // Event delegation for dynamic elements (like Leaflet popups)
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('.photo-trigger');
+      if (trigger) {
+        e.preventDefault();
+        // Re-query triggers to include any dynamically rendered map popups
+        currentTriggers = Array.from(document.querySelectorAll('.photo-trigger'));
+        let index = currentTriggers.indexOf(trigger);
+        if (index === -1) index = 0;
+        showPhoto(index);
+        modal.showModal();
+      }
+    });
+
+    prevBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showPhoto(currentIndex - 1);
+    });
+
+    nextBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showPhoto(currentIndex + 1);
+    });
+
+    // Keyboard navigation
+    modal.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') showPhoto(currentIndex - 1);
+      if (e.key === 'ArrowRight') showPhoto(currentIndex + 1);
+    });
+    
+    // Close on backdrop click (outside form)
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.close();
+      }
+    });
+  });
+</script>

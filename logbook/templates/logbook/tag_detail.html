@@ -37,6 +37,17 @@
             <span class="text-text-secondary text-xs">on {{ entry.trip.boat.name }}</span>
           </div>
 
+          {% if entry.photos.all %}
+          <div class="flex flex-wrap gap-2 mt-3">
+            {% for photo in entry.photos.all %}
+            <button type="button" class="block photo-trigger cursor-pointer" data-highres="{{ photo.image.url }}">
+              <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:'Log photo' }}"
+                   class="w-32 h-24 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+            </button>
+            {% endfor %}
+          </div>
+          {% endif %}
+
           {% if entry.tags.all %}
           <div class="flex flex-wrap gap-1.5 mt-2">
             {% for t in entry.tags.all %}
@@ -64,4 +75,6 @@
   </div>
   {% endif %}
 </div>
+
+{% include 'logbook/partials/photo_modal.html' %}
 {% endblock %}
