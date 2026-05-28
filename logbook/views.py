@@ -583,6 +583,13 @@ def log_entry_create_view(request, pk):
                 timestamp=timezone.now(),
             )
 
+            import re
+            if entry_text:
+                hashtags = re.findall(r'#(\w+)', entry_text)
+                for tag_name in hashtags:
+                    tag, _ = Tag.objects.get_or_create(name=tag_name.lower())
+                    log_entry.tags.add(tag)
+
             for photo_file in photos:
                 photo_obj = LogEntryPhoto(
                     log_entry=log_entry,
@@ -620,6 +627,13 @@ def boat_log_entry_create_view(request, pk):
                 entry_text=entry_text,
                 timestamp=timezone.now(),
             )
+
+            import re
+            if entry_text:
+                hashtags = re.findall(r'#(\w+)', entry_text)
+                for tag_name in hashtags:
+                    tag, _ = Tag.objects.get_or_create(name=tag_name.lower())
+                    log_entry.tags.add(tag)
 
             for photo_file in photos:
                 photo_obj = LogEntryPhoto(
