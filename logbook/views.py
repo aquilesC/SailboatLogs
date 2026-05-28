@@ -1,5 +1,9 @@
 import re
 import json
+import logging
+from io import BytesIO
+from django.conf import settings
+from django.core.files.base import ContentFile
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -9,11 +13,14 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.db.models import Q, Count, Sum
 from dateutil import parser
-from .models import Profile, Boat, Trip, Tag, LogEntry
+import requests
+from .models import Profile, Boat, Trip, Tag, LogEntry, GPXFile, LogEntryPhoto
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════
-# Twilio Webhook (existing — untouched)
+# Twilio Webhook
 # ═══════════════════════════════════════════
 
 @csrf_exempt
@@ -76,6 +83,57 @@ def twilio_webhook(request):
             # lowercase tags for consistency
             tag, _ = Tag.objects.get_or_create(name=tag_name.lower())
             log_entry.tags.add(tag)
+
+        # Handle media attachments (photos and GPX files)
+        num_media = int(request.POST.get('NumMedia', 0))
+        for i in range(num_media):
+            media_url = request.POST.get(f'MediaUrl{i}')
+            media_type = request.POST.get(f'MediaContentType{i}', '')
+
+            if not media_url:
+                continue
+
+            try:
+                # Download media from Twilio (requires Basic Auth)
+                auth = None
+                if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
+                    auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+
+                response = requests.get(media_url, auth=auth, timeout=30)
+                response.raise_for_status()
+                file_content = response.content
+
+                # Determine filename from Content-Disposition or URL
+                content_disp = response.headers.get('Content-Disposition', '')
+                if 'filename=' in content_disp:
+                    filename = content_disp.split('filename=')[-1].strip('"\'')
+                else:
+                    filename = media_url.split('/')[-1].split('?')[0]
+
+                if media_type in ('application/gpx+xml', 'application/xml', 'text/xml') or filename.lower().endswith('.gpx'):
+                    # Save as GPX file
+                    gpx_file = GPXFile(
+                        trip=active_trip,
+                        original_filename=filename or f'whatsapp_track_{i}.gpx',
+                        source='whatsapp',
+                    )
+                    gpx_file.file.save(filename or f'whatsapp_track_{i}.gpx', ContentFile(file_content))
+                    gpx_file.save()
+
+                elif media_type.startswith('image/'):
+                    # Save as photo on the log entry
+                    ext = media_type.split('/')[-1].replace('jpeg', 'jpg')
+                    photo_filename = filename or f'whatsapp_photo_{i}.{ext}'
+                    photo = LogEntryPhoto(
+                        log_entry=log_entry,
+                        caption=body[:255] if body else '',
+                        source='whatsapp',
+                    )
+                    photo.image.save(photo_filename, ContentFile(file_content))
+                    photo.save()
+
+            except Exception as e:
+                logger.error(f"Error downloading media {i} from Twilio: {e}")
 
         # Return TwiML response or a simple 200 OK. 
         # Twilio expects an XML response, but an empty 200 is also accepted.
@@ -177,6 +235,18 @@ def boat_edit_view(request, pk):
 # Trip Management
 # ═══════════════════════════════════════════
 
+def _build_gpx_tracks_json(trip):
+    """Build a JSON-safe list of GPX tracks for the map."""
+    tracks = []
+    for gpx in trip.gpx_files.all():
+        if gpx.track_points:
+            tracks.append({
+                'points': gpx.track_points,
+                'filename': gpx.original_filename,
+            })
+    return json.dumps(tracks)
+
+
 @login_required
 def trip_list_view(request):
     trips = Trip.objects.filter(
@@ -198,14 +268,20 @@ def trip_list_view(request):
 @login_required
 def trip_detail_view(request, pk):
     trip = get_object_or_404(Trip, pk=pk, boat__shared_users=request.user)
-    log_entries = trip.log_entries.all().order_by('timestamp').prefetch_related('tags')
+    log_entries = trip.log_entries.all().order_by('-timestamp').prefetch_related('tags', 'photos')
 
     if request.method == 'POST':
-        # Handle GPX upload
-        gpx_file = request.FILES.get('gpx_file')
-        if gpx_file:
-            trip.gpx_file = gpx_file
-            trip.save()
+        # Handle GPX upload (multiple files)
+        gpx_files = request.FILES.getlist('gpx_file')
+        if gpx_files:
+            for f in gpx_files:
+                gpx = GPXFile(
+                    trip=trip,
+                    original_filename=f.name,
+                    source='web',
+                )
+                gpx.file.save(f.name, f)
+                gpx.save()
             return redirect('trip_detail', pk=pk)
 
         # Handle share slug regeneration
@@ -213,9 +289,24 @@ def trip_detail_view(request, pk):
             trip.regenerate_share_slug()
             return redirect('trip_detail', pk=pk)
 
+        # Handle GPX file deletion
+        delete_gpx = request.POST.get('delete_gpx')
+        if delete_gpx:
+            gpx = trip.gpx_files.filter(pk=delete_gpx).first()
+            if gpx:
+                gpx.file.delete(save=False)
+                gpx.delete()
+                # Re-aggregate after deletion
+                from .signals import _aggregate_trip_stats
+                _aggregate_trip_stats(trip)
+            return redirect('trip_detail', pk=pk)
+
+    gpx_tracks_json = _build_gpx_tracks_json(trip)
+
     return render(request, 'logbook/trip_detail_internal.html', {
         'trip': trip,
         'log_entries': log_entries,
+        'gpx_tracks_json': gpx_tracks_json,
     })
 
 
@@ -240,11 +331,13 @@ def trip_start_view(request):
 
 def trip_public_view(request, share_slug):
     trip = get_object_or_404(Trip, share_slug=share_slug)
-    log_entries = trip.log_entries.all().order_by('timestamp').prefetch_related('tags')
+    log_entries = trip.log_entries.all().order_by('-timestamp').prefetch_related('tags', 'photos')
+    gpx_tracks_json = _build_gpx_tracks_json(trip)
 
     return render(request, 'logbook/trip_detail_public.html', {
         'trip': trip,
         'log_entries': log_entries,
+        'gpx_tracks_json': gpx_tracks_json,
     })
 
 

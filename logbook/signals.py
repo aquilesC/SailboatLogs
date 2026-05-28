@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save
+from django.db.models import Sum, Max
 from django.dispatch import receiver
-from .models import LogEntry, Trip
+from .models import LogEntry, GPXFile
 from .utils import fetch_weather_from_open_meteo
 import gpxpy
 import logging
@@ -31,33 +32,62 @@ def enrich_log_entry_weather(sender, instance, created, **kwargs):
             if update_fields:
                 instance.save(update_fields=update_fields)
 
-@receiver(post_save, sender=Trip)
-def parse_trip_gpx(sender, instance, **kwargs):
-    # Only parse if we have a file and the stats haven't been calculated yet
-    if instance.gpx_file and (instance.total_distance is None or instance.max_speed is None):
-        try:
-            instance.gpx_file.open()
-            gpx = gpxpy.parse(instance.gpx_file.file)
-            
-            moving_data = gpx.get_moving_data()
-            
-            # Convert distance (meters to nautical miles)
-            total_distance_nm = moving_data.moving_distance * 0.000539957
-            
-            # Convert speed (m/s to knots)
-            max_speed_knots = moving_data.max_speed * 1.94384 if moving_data.max_speed else 0.0
-            
-            instance.gpx_file.close()
-            
-            # Use update to avoid recursive save() calls
-            Trip.objects.filter(pk=instance.pk).update(
-                total_distance=round(total_distance_nm, 2),
-                max_speed=round(max_speed_knots, 2)
-            )
-            
-            # Update the in-memory instance as well
-            instance.total_distance = round(total_distance_nm, 2)
-            instance.max_speed = round(max_speed_knots, 2)
-            
-        except Exception as e:
-            logger.error(f"Error parsing GPX file for Trip {instance.pk}: {e}")
+
+@receiver(post_save, sender=GPXFile)
+def parse_gpx_file(sender, instance, created, **kwargs):
+    """Parse a GPXFile on creation: extract track points, distance, and speed."""
+    if not created:
+        return
+
+    if not instance.file:
+        return
+
+    try:
+        instance.file.open('rb')
+        gpx = gpxpy.parse(instance.file.file)
+        instance.file.close()
+
+        # Extract all track points as [[lat, lng], ...]
+        track_points = []
+        for track in gpx.tracks:
+            for segment in track.segments:
+                for point in segment.points:
+                    track_points.append([float(point.latitude), float(point.longitude)])
+
+        # Calculate distance and speed
+        moving_data = gpx.get_moving_data()
+        distance_nm = moving_data.moving_distance * 0.000539957 if moving_data.moving_distance else 0.0
+        max_speed_kn = moving_data.max_speed * 1.94384 if moving_data.max_speed else 0.0
+
+        # Update the GPXFile record (avoid recursive signal with update())
+        GPXFile.objects.filter(pk=instance.pk).update(
+            track_points=track_points,
+            distance_nm=round(distance_nm, 2),
+            max_speed_kn=round(max_speed_kn, 2),
+        )
+
+        # Update in-memory instance
+        instance.track_points = track_points
+        instance.distance_nm = round(distance_nm, 2)
+        instance.max_speed_kn = round(max_speed_kn, 2)
+
+        # Re-aggregate trip-level stats from all GPX files
+        _aggregate_trip_stats(instance.trip)
+
+    except Exception as e:
+        logger.error(f"Error parsing GPX file {instance.pk} ({instance.original_filename}): {e}")
+
+
+def _aggregate_trip_stats(trip):
+    """Sum distance and take max speed across all GPXFile records for a trip."""
+    from .models import Trip
+
+    stats = trip.gpx_files.aggregate(
+        total_distance=Sum('distance_nm'),
+        top_speed=Max('max_speed_kn'),
+    )
+
+    Trip.objects.filter(pk=trip.pk).update(
+        total_distance=stats['total_distance'] or None,
+        max_speed=stats['top_speed'] or None,
+    )

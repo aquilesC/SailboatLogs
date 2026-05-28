@@ -21,6 +21,10 @@ env/
 # Node (Tailwind CSS build)
 node_modules/
 
+# Secrets
+secrets.json
+
 # macOS
 .DS_Store
+
 

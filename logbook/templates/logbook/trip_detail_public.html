@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ trip.title }} — Shared Voyage{% endblock %}
 {% block meta_description %}Follow the voyage "{{ trip.title }}" aboard {{ trip.boat.name }}. A public sailing log.{% endblock %}
@@ -45,7 +46,7 @@
     <div id="trip-map"></div>
   </div>
 
-  <!-- Log Timeline (Read-Only) -->
+  <!-- Log Timeline (Read-Only, anti-chronological: newest first) -->
   <div>
     <h2 class="text-lg mb-4">Voyage Log</h2>
 
@@ -61,7 +62,21 @@
           <div class="card !p-4">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
+                {% if entry.entry_text %}
                 <p class="text-text-primary whitespace-pre-wrap">{{ entry.entry_text }}</p>
+                {% endif %}
+
+                <!-- Photos -->
+                {% if entry.photos.all %}
+                <div class="flex flex-wrap gap-2 mt-3">
+                  {% for photo in entry.photos.all %}
+                  <a href="{{ photo.image.url }}" target="_blank" class="block">
+                    <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:'Log photo' }}"
+                         class="w-32 h-24 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+                  </a>
+                  {% endfor %}
+                </div>
+                {% endif %}
 
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
                   <span class="text-text-secondary text-xs font-mono">{{ entry.timestamp|date:"H:i" }} &middot; {{ entry.timestamp|date:"M d, Y" }}</span>
@@ -122,6 +137,26 @@
     subdomains: 'abcd',
   }).addTo(map);
 
+  const allBounds = [];
+
+  // GPX tracks
+  const trackColors = ['#0369A1', '#EA580C', '#15803D', '#7C3AED', '#B91C1C'];
+  const gpxTracks = {{ gpx_tracks_json|safe }};
+
+  gpxTracks.forEach(function(track, idx) {
+    if (track.points && track.points.length > 0) {
+      const color = trackColors[idx % trackColors.length];
+      L.polyline(track.points, {
+        color: color,
+        weight: 3,
+        opacity: 0.85,
+      }).addTo(map).bindTooltip(track.filename, { sticky: true });
+
+      track.points.forEach(function(p) { allBounds.push(p); });
+    }
+  });
+
+  // Log entry markers
   const coords = [
     {% for entry in log_entries %}
     {% if entry.latitude and entry.longitude %}
@@ -130,27 +165,19 @@
     {% endfor %}
   ];
 
-  if (coords.length > 0) {
-    coords.forEach(function(c) {
-      L.circleMarker(c, {
-        radius: 6,
-        fillColor: '#1E3A8A',
-        color: '#FFFFFF',
-        weight: 2,
-        fillOpacity: 0.9,
-      }).addTo(map);
-    });
+  coords.forEach(function(c) {
+    L.circleMarker(c, {
+      radius: 6,
+      fillColor: '#1E3A8A',
+      color: '#FFFFFF',
+      weight: 2,
+      fillOpacity: 0.9,
+    }).addTo(map);
+    allBounds.push(c);
+  });
 
-    if (coords.length > 1) {
-      L.polyline(coords, {
-        color: '#0369A1',
-        weight: 3,
-        opacity: 0.7,
-        dashArray: '8, 6',
-      }).addTo(map);
-    }
-
-    map.fitBounds(coords, { padding: [40, 40] });
+  if (allBounds.length > 0) {
+    map.fitBounds(allBounds, { padding: [40, 40] });
   } else {
     map.setView([40, -30], 3);
   }

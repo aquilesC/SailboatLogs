@@ -10,10 +10,22 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import json
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load secrets from untracked file
+_secrets_path = BASE_DIR / 'secrets.json'
+if _secrets_path.exists():
+    with open(_secrets_path) as f:
+        _secrets = json.load(f)
+else:
+    _secrets = {}
+
+TWILIO_ACCOUNT_SID = _secrets.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = _secrets.get('TWILIO_AUTH_TOKEN', '')
 
 
 # Quick-start development settings - unsuitable for production

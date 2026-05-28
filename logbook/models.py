@@ -64,7 +64,7 @@ class Tag(models.Model):
 class LogEntry(models.Model):
     boat = models.ForeignKey(Boat, on_delete=models.CASCADE, related_name='log_entries', null=True, blank=True)
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='log_entries', null=True, blank=True)
-    entry_text = models.TextField()
+    entry_text = models.TextField(blank=True)
     timestamp = models.DateTimeField(help_text="Parsed from Twilio payload")
     
     # Location
@@ -83,3 +83,49 @@ class LogEntry(models.Model):
 
     def __str__(self):
         return f"{self.trip.title} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+
+
+class GPXFile(models.Model):
+    """A GPX track file attached to a trip. Multiple GPX files per trip are supported."""
+    SOURCE_CHOICES = [
+        ('web', 'Web Upload'),
+        ('whatsapp', 'WhatsApp'),
+    ]
+
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='gpx_files')
+    file = models.FileField(upload_to='gpx_files/')
+    original_filename = models.CharField(max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='web')
+
+    # Parsed data (populated by signal on save)
+    track_points = models.JSONField(default=list, blank=True, help_text="Parsed [[lat, lng], ...] array")
+    distance_nm = models.FloatField(null=True, blank=True, help_text="Distance in nautical miles")
+    max_speed_kn = models.FloatField(null=True, blank=True, help_text="Max speed in knots")
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.original_filename} ({self.trip.title})"
+
+
+class LogEntryPhoto(models.Model):
+    """A photo attached to a log entry. Can arrive via WhatsApp or web upload."""
+    SOURCE_CHOICES = [
+        ('web', 'Web Upload'),
+        ('whatsapp', 'WhatsApp'),
+    ]
+
+    log_entry = models.ForeignKey(LogEntry, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='log_photos/%Y/%m/')
+    caption = models.CharField(max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='web')
+
+    class Meta:
+        ordering = ['uploaded_at']
+
+    def __str__(self):
+        return f"Photo for {self.log_entry}"
+
