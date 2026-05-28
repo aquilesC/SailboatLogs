@@ -49,7 +49,13 @@ class Trip(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(f"{self.boat.name}-{self.title}")
+            base_slug = slugify(f"{self.boat.name}-{self.title}")
+            slug = base_slug
+            counter = 1
+            while Trip.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         if not self.share_slug:
             self.share_slug = self._generate_share_slug()
         super().save(*args, **kwargs)
