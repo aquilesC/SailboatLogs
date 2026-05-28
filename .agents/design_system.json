@@ -1,0 +1,101 @@
+{
+  "designSystem": {
+    "name": "Maritime Logbook",
+    "version": "1.0.0",
+    "designPrinciples": [
+      "High contrast for outdoor daylight visibility",
+      "Large touch targets for mobile usability on the water",
+      "Clear distinction between read-only data and interactive elements"
+    ],
+    "tokens": {
+      "colors": {
+        "brand": {
+          "primary": {
+            "value": "#1E3A8A",
+            "tailwind": "blue-900",
+            "usage": "Top navigation, active states, primary branding"
+          },
+          "secondary": {
+            "value": "#0369A1",
+            "tailwind": "sky-700",
+            "usage": "Secondary buttons, subtle highlights"
+          },
+          "accent": {
+            "value": "#EA580C",
+            "tailwind": "orange-600",
+            "usage": "Primary CTAs, 'Start Trip' buttons, active recording indicators"
+          }
+        },
+        "background": {
+          "base": {
+            "value": "#F8FAFC",
+            "tailwind": "slate-50",
+            "usage": "Main application background"
+          },
+          "surface": {
+            "value": "#FFFFFF",
+            "tailwind": "white",
+            "usage": "Cards, dropdowns, forms"
+          },
+          "surfaceHighlight": {
+            "value": "#F1F5F9",
+            "tailwind": "slate-100",
+            "usage": "Hover states on list items and table rows"
+          }
+        },
+        "text": {
+          "primary": {
+            "value": "#0F172A",
+            "tailwind": "slate-900",
+            "usage": "Headings, primary body copy"
+          },
+          "secondary": {
+            "value": "#475569",
+            "tailwind": "slate-600",
+            "usage": "Timestamps, secondary descriptions, metadata"
+          },
+          "inverse": {
+            "value": "#FFFFFF",
+            "tailwind": "white",
+            "usage": "Text on primary and accent background colors"
+          }
+        },
+        "status": {
+          "success": {
+            "value": "#15803D",
+            "tailwind": "green-700",
+            "usage": "Trip completed, GPX upload success"
+          },
+          "warning": {
+            "value": "#B45309",
+            "tailwind": "amber-700",
+            "usage": "Offline queue notifications"
+          },
+          "danger": {
+            "value": "#B91C1C",
+            "tailwind": "red-700",
+            "usage": "Delete boat, end trip prematurely"
+          }
+        }
+      },
+      "typography": {
+        "fonts": {
+          "sans": {
+            "family": "Inter, system-ui, -apple-system, sans-serif",
+            "usage": "All general UI text, headings, and buttons"
+          },
+          "mono": {
+            "family": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            "usage": "Coordinates, GPX data, log timestamps, hashtags"
+          }
+        },
+        "sizes": {
+          "h1": { "size": "2.25rem", "weight": "700", "lineHeight": "2.5rem" },
+          "h2": { "size": "1.5rem", "weight": "600", "lineHeight": "2rem" },
+          "h3": { "size": "1.25rem", "weight": "600", "lineHeight": "1.75rem" },
+          "body": { "size": "1rem", "weight": "400", "lineHeight": "1.5rem" }
+        }
+      }
+    }
+  }
+}

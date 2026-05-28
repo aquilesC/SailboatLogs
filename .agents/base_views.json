@@ -1,0 +1,134 @@
+{
+  "sailingLogbookApp": {
+    "appName": "logs",
+    "modules": [
+      {
+        "moduleName": "Authentication & Account Management",
+        "description": "Handles user onboarding and session management.",
+        "views": [
+          {
+            "name": "Sign Up",
+            "urlPath": "/accounts/signup/",
+            "templateName": "signup.html",
+            "purpose": "Register new users.",
+            "uiElements": ["Username field", "Email field", "Password fields", "Submit button"]
+          },
+          {
+            "name": "Log In",
+            "urlPath": "/accounts/login/",
+            "templateName": "login.html",
+            "purpose": "Authenticate existing users and redirect to dashboard.",
+            "uiElements": ["Username field", "Password field", "Login button", "Reset password link"]
+          },
+          {
+            "name": "Log Out",
+            "urlPath": "/accounts/logout/",
+            "templateName": null,
+            "purpose": "End the user session and redirect to login.",
+            "uiElements": []
+          }
+        ]
+      },
+      {
+        "moduleName": "Core Dashboard",
+        "description": "The command center and primary landing page for authenticated users.",
+        "views": [
+          {
+            "name": "Dashboard",
+            "urlPath": "/dashboard/",
+            "templateName": "dashboard.html",
+            "purpose": "Display an overview of the user's sailing profile and active status.",
+            "uiElements": [
+              "Active Trip card (if applicable)",
+              "List of owned/shared boats",
+              "Recent log entries feed",
+              "Quick-action 'Start New Trip' button"
+            ]
+          }
+        ]
+      },
+      {
+        "moduleName": "Boat Management",
+        "description": "Configuration for individual vessels and shared access controls.",
+        "views": [
+          {
+            "name": "Boat Detail",
+            "urlPath": "/boats/<int:pk>/",
+            "templateName": "boat_detail.html",
+            "purpose": "Display a single boat's profile, historical stats, and crew list.",
+            "uiElements": [
+              "Boat metadata (name, model, etc.)",
+              "Aggregated stats (total miles, hours)",
+              "Authorized Crew list",
+              "Invite/Add Crew Member form"
+            ]
+          },
+          {
+            "name": "Create / Edit Boat",
+            "urlPath": "/boats/add/ OR /boats/<int:pk>/edit/",
+            "templateName": "boat_form.html",
+            "purpose": "Form to input or change boat details.",
+            "uiElements": ["Name input", "Model input", "Homeport input", "MMSI/Registration input", "Save button"]
+          }
+        ]
+      },
+      {
+        "moduleName": "Trip Management",
+        "description": "Core routing for creating, viewing, and sharing sailing journeys.",
+        "views": [
+          {
+            "name": "Trip Index",
+            "urlPath": "/trips/",
+            "templateName": "trip_list.html",
+            "purpose": "Searchable archive of all past voyages.",
+            "uiElements": ["Search/Filter bar", "Trip summary cards (Dates, Distance, Weather)"]
+          },
+          {
+            "name": "Internal Trip Detail",
+            "urlPath": "/trips/<int:pk>/",
+            "templateName": "trip_detail_internal.html",
+            "purpose": "Master management view for a specific trip, restricted to crew.",
+            "uiElements": [
+              "Interactive Leaflet.js map (GPX or pins)",
+              "Chronological timeline of LogEntries",
+              "Inline edit buttons for logs",
+              "GPX file upload dropzone",
+              "Public Sharing toggle and link generator"
+            ]
+          },
+          {
+            "name": "Public Shared Trip",
+            "urlPath": "/shared/<slug:share_slug>/",
+            "templateName": "trip_detail_public.html",
+            "purpose": "Read-only, public-facing timeline for family and friends.",
+            "uiElements": [
+              "Interactive Leaflet.js map",
+              "Chronological timeline of logs and photos",
+              "NO administrative controls or edit buttons"
+            ]
+          },
+          {
+            "name": "Start Trip",
+            "urlPath": "/trips/start/",
+            "templateName": "trip_form.html",
+            "purpose": "Form to launch a new trip and set is_active=True for the Twilio webhook.",
+            "uiElements": ["Boat selector dropdown", "Trip Title input", "Purpose selector", "Start button"]
+          }
+        ]
+      },
+      {
+        "moduleName": "Log Analysis",
+        "description": "Views for parsing and exploring unstructured log data.",
+        "views": [
+          {
+            "name": "Tag Archive",
+            "urlPath": "/tags/<str:tag_name>/",
+            "templateName": "tag_detail.html",
+            "purpose": "Display all log entries across all trips that contain a specific hashtag.",
+            "uiElements": ["Tag header", "Chronological list of associated LogEntries", "Links to originating trips"]
+          }
+        ]
+      }
+    ]
+  }
+}

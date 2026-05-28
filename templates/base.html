@@ -1,0 +1,110 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Maritime Logbook{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Sailing logbook for tracking trips, log entries, and voyage data.{% endblock %}">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Compiled TailwindCSS -->
+  <link rel="stylesheet" href="{% static 'logbook/css/styles.css' %}">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-bg-base text-text-primary">
+
+  <!-- ═══ Top Navigation ═══ -->
+  <nav class="bg-brand-primary sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Brand -->
+        <a href="{% url 'dashboard' %}" class="flex items-center gap-2 text-text-inverse font-bold text-lg tracking-tight" id="nav-brand">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 17h1l1-2 2 2h2l2-4 2 4h2l2-2 1 2h1M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+          </svg>
+          Maritime Logbook
+        </a>
+
+        <!-- Navigation Links -->
+        {% if user.is_authenticated %}
+        <div class="hidden sm:flex items-center gap-6">
+          <a href="{% url 'dashboard' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-dashboard">Dashboard</a>
+          <a href="{% url 'trip_list' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-trips">Trips</a>
+          <a href="{% url 'trip_start' %}" class="btn-primary text-sm !py-2 !px-4" id="nav-start-trip">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Start Trip
+          </a>
+        </div>
+
+        <!-- User Menu -->
+        <div class="flex items-center gap-4">
+          <span class="text-text-inverse/60 text-sm hidden sm:inline">{{ user.username }}</span>
+          <a href="{% url 'logout' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-logout">Log Out</a>
+        </div>
+        {% else %}
+        <div class="flex items-center gap-4">
+          <a href="{% url 'login' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-login">Log In</a>
+          <a href="{% url 'signup' %}" class="btn-primary text-sm !py-2 !px-4" id="nav-signup">Sign Up</a>
+        </div>
+        {% endif %}
+
+        <!-- Mobile Menu Button -->
+        {% if user.is_authenticated %}
+        <button type="button" class="sm:hidden text-text-inverse p-2" id="mobile-menu-btn" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        {% endif %}
+      </div>
+
+      <!-- Mobile Menu -->
+      {% if user.is_authenticated %}
+      <div id="mobile-menu" class="hidden sm:hidden pb-4 border-t border-text-inverse/10 mt-2 pt-3">
+        <a href="{% url 'dashboard' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Dashboard</a>
+        <a href="{% url 'trip_list' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Trips</a>
+        <a href="{% url 'trip_start' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Start Trip</a>
+        <a href="{% url 'logout' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Log Out</a>
+      </div>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- ═══ Messages ═══ -->
+  {% if messages %}
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-2" id="messages-container">
+    {% for message in messages %}
+    <div class="flex items-center gap-3 p-4 rounded-lg text-sm font-medium
+                {% if message.tags == 'success' %}bg-status-success/10 text-status-success
+                {% elif message.tags == 'warning' %}bg-status-warning/10 text-status-warning
+                {% elif message.tags == 'error' %}bg-status-danger/10 text-status-danger
+                {% else %}bg-brand-primary/10 text-brand-primary{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ═══ Main Content ═══ -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="border-t border-gray-200 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <p class="text-text-secondary text-sm text-center">Maritime Logbook &middot; Built for sailors</p>
+    </div>
+  </footer>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/* Scan Django templates for class usage */
+@source "../../../../templates/**/*.html";
+@source "../../templates/**/*.html";
+
+/* ═══════════════════════════════════════════
+   Maritime Logbook — Design System Tokens
+   Mapped from .agents/design_system.json
+   ═══════════════════════════════════════════ */
+
+@theme {
+  /* Brand Colors */
+  --color-brand-primary: #1E3A8A;
+  --color-brand-secondary: #0369A1;
+  --color-brand-accent: #EA580C;
+
+  /* Background Colors */
+  --color-bg-base: #F8FAFC;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-surface-highlight: #F1F5F9;
+
+  /* Text Colors */
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-inverse: #FFFFFF;
+
+  /* Status Colors */
+  --color-status-success: #15803D;
+  --color-status-warning: #B45309;
+  --color-status-danger: #B91C1C;
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ═══════════════════════════════════════════
+   Base Layer — Typography defaults
+   ═══════════════════════════════════════════ */
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-base);
+    line-height: 1.5rem;
+    font-size: 1rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 2.5rem;
+    color: var(--color-text-primary);
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 2rem;
+    color: var(--color-text-primary);
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.75rem;
+    color: var(--color-text-primary);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Component Layer — Reusable UI patterns
+   ═══════════════════════════════════════════ */
+@layer components {
+  /* Primary CTA button (accent color) */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3
+           bg-brand-accent text-text-inverse font-semibold rounded-lg
+           hover:opacity-90 active:scale-[0.98]
+           transition-all duration-150 ease-in-out
+           min-h-12 min-w-12 cursor-pointer;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3
+           bg-brand-secondary text-text-inverse font-semibold rounded-lg
+           hover:opacity-90 active:scale-[0.98]
+           transition-all duration-150 ease-in-out
+           min-h-12 min-w-12 cursor-pointer;
+  }
+
+  /* Outline / ghost button */
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-6 py-3
+           border-2 border-brand-primary text-brand-primary font-semibold rounded-lg
+           hover:bg-brand-primary hover:text-text-inverse
+           active:scale-[0.98]
+           transition-all duration-150 ease-in-out
+           min-h-12 min-w-12 cursor-pointer;
+  }
+
+  /* Danger button */
+  .btn-danger {
+    @apply inline-flex items-center justify-center px-6 py-3
+           bg-status-danger text-text-inverse font-semibold rounded-lg
+           hover:opacity-90 active:scale-[0.98]
+           transition-all duration-150 ease-in-out
+           min-h-12 min-w-12 cursor-pointer;
+  }
+
+  /* Card surface */
+  .card {
+    @apply bg-bg-surface rounded-xl shadow-sm border border-gray-100 p-6;
+  }
+
+  /* Form input */
+  .form-input {
+    @apply w-full px-4 py-3 rounded-lg border border-gray-300
+           text-text-primary bg-bg-surface
+           focus:outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary
+           transition-colors duration-150
+           min-h-12;
+  }
+
+  /* Form label */
+  .form-label {
+    @apply block text-sm font-semibold text-text-primary mb-1.5;
+  }
+
+  /* Status badges */
+  .badge-success {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-status-success/10 text-status-success;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-status-warning/10 text-status-warning;
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-status-danger/10 text-status-danger;
+  }
+
+  /* Tag pill (monospace) */
+  .tag-pill {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-mono
+           bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20
+           transition-colors duration-150;
+  }
+}

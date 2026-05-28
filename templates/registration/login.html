@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — Maritime Logbook{% endblock %}
+{% block meta_description %}Log in to your Maritime Logbook account to manage your boats and trips.{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center">
+  <div class="card w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-text-primary">Welcome Back</h1>
+      <p class="text-text-secondary mt-2">Sign in to your sailing logbook</p>
+    </div>
+
+    <form method="post" id="login-form">
+      {% csrf_token %}
+
+      {% if form.errors %}
+      <div class="bg-status-danger/10 text-status-danger text-sm rounded-lg p-4 mb-6">
+        Invalid username or password. Please try again.
+      </div>
+      {% endif %}
+
+      <div class="space-y-5">
+        <div>
+          <label for="id_username" class="form-label">Username</label>
+          <input type="text" name="username" id="id_username" required autofocus
+                 class="form-input" placeholder="Enter your username">
+        </div>
+
+        <div>
+          <label for="id_password" class="form-label">Password</label>
+          <input type="password" name="password" id="id_password" required
+                 class="form-input" placeholder="Enter your password">
+        </div>
+
+        <button type="submit" class="btn-primary w-full" id="login-submit">
+          Log In
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-6 text-center">
+      <p class="text-text-secondary text-sm">
+        Don't have an account?
+        <a href="{% url 'signup' %}" class="text-brand-secondary font-semibold hover:underline">Sign up</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

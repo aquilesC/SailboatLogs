@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{% if boat %}Edit {{ boat.name }}{% else %}Add Boat{% endif %} — Maritime Logbook{% endblock %}
+{% block meta_description %}{% if boat %}Edit boat details for {{ boat.name }}.{% else %}Register a new boat.{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-8">
+
+  <!-- Breadcrumb -->
+  <nav class="text-sm text-text-secondary">
+    <a href="{% url 'dashboard' %}" class="hover:text-brand-secondary">Dashboard</a>
+    <span class="mx-2">/</span>
+    {% if boat %}
+    <a href="{% url 'boat_detail' pk=boat.pk %}" class="hover:text-brand-secondary">{{ boat.name }}</a>
+    <span class="mx-2">/</span>
+    <span class="text-text-primary font-medium">Edit</span>
+    {% else %}
+    <span class="text-text-primary font-medium">Add Boat</span>
+    {% endif %}
+  </nav>
+
+  <h1>{% if boat %}Edit {{ boat.name }}{% else %}Add New Boat{% endif %}</h1>
+
+  <form method="post" class="card space-y-6" id="boat-form">
+    {% csrf_token %}
+
+    <div>
+      <label for="id_name" class="form-label">Boat Name *</label>
+      <input type="text" name="name" id="id_name" required
+             value="{{ boat.name|default:'' }}"
+             class="form-input" placeholder="e.g., S/V Wanderlust">
+    </div>
+
+    <div>
+      <label for="id_boat_model" class="form-label">Model</label>
+      <input type="text" name="boat_model" id="id_boat_model"
+             value="{{ boat.boat_model|default:'' }}"
+             class="form-input" placeholder="e.g., Beneteau Oceanis 38.1">
+    </div>
+
+    <div>
+      <label for="id_homeport" class="form-label">Homeport</label>
+      <input type="text" name="homeport" id="id_homeport"
+             value="{{ boat.homeport|default:'' }}"
+             class="form-input" placeholder="e.g., Marina Port Vell, Barcelona">
+    </div>
+
+    <div>
+      <label for="id_mmsi_registration" class="form-label">MMSI / Registration</label>
+      <input type="text" name="mmsi_registration" id="id_mmsi_registration"
+             value="{{ boat.mmsi_registration|default:'' }}"
+             class="form-input font-mono" placeholder="e.g., 123456789">
+    </div>
+
+    <div>
+      <label for="id_description" class="form-label">Description</label>
+      <textarea name="description" id="id_description" rows="3"
+                class="form-input" placeholder="Any notes about the boat...">{{ boat.description|default:'' }}</textarea>
+    </div>
+
+    <div class="flex items-center gap-4 pt-2">
+      <button type="submit" class="btn-primary" id="boat-form-submit">
+        {% if boat %}Save Changes{% else %}Add Boat{% endif %}
+      </button>
+      {% if boat %}
+      <a href="{% url 'boat_detail' pk=boat.pk %}" class="text-text-secondary text-sm hover:underline">Cancel</a>
+      {% else %}
+      <a href="{% url 'dashboard' %}" class="text-text-secondary text-sm hover:underline">Cancel</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

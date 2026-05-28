@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
@@ -12,6 +14,9 @@ class Profile(models.Model):
 class Boat(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    boat_model = models.CharField(max_length=255, blank=True, help_text="Boat model (e.g., Beneteau Oceanis 38.1)")
+    homeport = models.CharField(max_length=255, blank=True, help_text="Home port / marina")
+    mmsi_registration = models.CharField(max_length=100, blank=True, help_text="MMSI number or registration ID")
     shared_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='shared_boats', blank=True)
 
     def __str__(self):
@@ -25,14 +30,26 @@ class Trip(models.Model):
     is_active = models.BooleanField(default=True)
     gpx_file = models.FileField(upload_to='gpx_files/', null=True, blank=True)
     slug = models.SlugField(unique=True, blank=True)
+    share_slug = models.SlugField(unique=True, blank=True, help_text="Randomized slug for public sharing links")
     
     # These fields will be populated in Phase 4
     total_distance = models.FloatField(null=True, blank=True, help_text="Total distance in nautical miles or km")
     max_speed = models.FloatField(null=True, blank=True, help_text="Max speed in knots or km/h")
 
+    def _generate_share_slug(self):
+        """Generate a short random slug for public sharing."""
+        return uuid.uuid4().hex[:12]
+
+    def regenerate_share_slug(self):
+        """Regenerate the share_slug and save."""
+        self.share_slug = self._generate_share_slug()
+        self.save(update_fields=['share_slug'])
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(f"{self.boat.name}-{self.title}")
+        if not self.share_slug:
+            self.share_slug = self._generate_share_slug()
         super().save(*args, **kwargs)
 
     def __str__(self):

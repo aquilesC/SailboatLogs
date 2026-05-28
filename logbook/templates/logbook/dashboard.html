@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Maritime Logbook{% endblock %}
+{% block meta_description %}Your sailing command center. View active trips, boats, and recent log entries.{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="text-text-secondary mt-1">Welcome back, {{ user.username }}</p>
+    </div>
+    <a href="{% url 'trip_start' %}" class="btn-primary" id="dashboard-start-trip">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Start New Trip
+    </a>
+  </div>
+
+  <!-- Active Trip Card -->
+  {% if active_trip %}
+  <div class="card border-l-4 border-l-brand-accent" id="active-trip-card">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-brand-accent animate-pulse"></span>
+          <span class="text-brand-accent font-semibold text-sm uppercase tracking-wide">Active Trip</span>
+        </div>
+        <h2 class="mt-1">
+          <a href="{% url 'trip_detail' pk=active_trip.pk %}" class="hover:text-brand-secondary transition-colors">
+            {{ active_trip.title }}
+          </a>
+        </h2>
+        <p class="text-text-secondary mt-1">
+          {{ active_trip.boat.name }} &middot; Started {{ active_trip.start_date }}
+        </p>
+      </div>
+      <a href="{% url 'trip_detail' pk=active_trip.pk %}" class="btn-outline text-sm !py-2 !px-4" id="view-active-trip">
+        View Trip
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Boats + Recent Logs Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+    <!-- Boats Section -->
+    <div class="lg:col-span-1">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg">Your Boats</h2>
+        <a href="{% url 'boat_create' %}" class="text-brand-secondary text-sm font-semibold hover:underline" id="add-boat-link">+ Add Boat</a>
+      </div>
+
+      {% if boats %}
+      <div class="space-y-3">
+        {% for boat in boats %}
+        <a href="{% url 'boat_detail' pk=boat.pk %}" 
+           class="card block hover:bg-bg-surface-highlight transition-colors !p-4" 
+           id="boat-card-{{ boat.pk }}">
+          <div class="font-semibold text-text-primary">{{ boat.name }}</div>
+          {% if boat.boat_model %}
+          <div class="text-text-secondary text-sm mt-0.5">{{ boat.boat_model }}</div>
+          {% endif %}
+          {% if boat.homeport %}
+          <div class="text-text-secondary text-xs mt-1 font-mono">📍 {{ boat.homeport }}</div>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card text-center !py-12">
+        <p class="text-text-secondary mb-4">No boats registered yet.</p>
+        <a href="{% url 'boat_create' %}" class="btn-secondary text-sm" id="add-first-boat">Add Your First Boat</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Recent Log Entries -->
+    <div class="lg:col-span-2">
+      <h2 class="text-lg mb-4">Recent Log Entries</h2>
+
+      {% if recent_logs %}
+      <div class="space-y-3">
+        {% for log in recent_logs %}
+        <div class="card !p-4" id="log-entry-{{ log.pk }}">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <p class="text-text-primary">{{ log.entry_text|truncatewords:30 }}</p>
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                <span class="text-text-secondary text-xs font-mono">{{ log.timestamp|date:"Y-m-d H:i" }}</span>
+                <a href="{% url 'trip_detail' pk=log.trip.pk %}" class="text-brand-secondary text-xs font-semibold hover:underline">
+                  {{ log.trip.title }}
+                </a>
+                {% if log.latitude and log.longitude %}
+                <span class="text-text-secondary text-xs font-mono">{{ log.latitude }}°, {{ log.longitude }}°</span>
+                {% endif %}
+              </div>
+              {% if log.tags.all %}
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                {% for tag in log.tags.all %}
+                <a href="{% url 'tag_detail' tag_name=tag.name %}" class="tag-pill">#{{ tag.name }}</a>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            {% if log.wind_speed %}
+            <div class="text-right shrink-0">
+              <div class="text-text-secondary text-xs">Wind</div>
+              <div class="font-mono text-sm font-semibold">{{ log.wind_speed }} kn</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card text-center !py-12">
+        <p class="text-text-secondary">No log entries yet. Start a trip and send your first WhatsApp message!</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

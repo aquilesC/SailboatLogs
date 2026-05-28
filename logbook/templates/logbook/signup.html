@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up — Maritime Logbook{% endblock %}
+{% block meta_description %}Create a Maritime Logbook account to start tracking your sailing voyages.{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center">
+  <div class="card w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-text-primary">Create Account</h1>
+      <p class="text-text-secondary mt-2">Start tracking your sailing adventures</p>
+    </div>
+
+    <form method="post" id="signup-form">
+      {% csrf_token %}
+
+      {% if form.errors %}
+      <div class="bg-status-danger/10 text-status-danger text-sm rounded-lg p-4 mb-6">
+        <ul class="list-disc list-inside space-y-1">
+          {% for field in form %}
+            {% for error in field.errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <div class="space-y-5">
+        <div>
+          <label for="id_username" class="form-label">Username</label>
+          <input type="text" name="username" id="id_username" required autofocus
+                 value="{{ form.username.value|default:'' }}"
+                 class="form-input" placeholder="Choose a username">
+          {% if form.username.help_text %}
+          <p class="text-text-secondary text-xs mt-1">{{ form.username.help_text }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="id_password1" class="form-label">Password</label>
+          <input type="password" name="password1" id="id_password1" required
+                 class="form-input" placeholder="Create a password">
+          {% if form.password1.help_text %}
+          <p class="text-text-secondary text-xs mt-1">{{ form.password1.help_text }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="id_password2" class="form-label">Confirm Password</label>
+          <input type="password" name="password2" id="id_password2" required
+                 class="form-input" placeholder="Confirm your password">
+        </div>
+
+        <button type="submit" class="btn-primary w-full" id="signup-submit">
+          Create Account
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-6 text-center">
+      <p class="text-text-secondary text-sm">
+        Already have an account?
+        <a href="{% url 'login' %}" class="text-brand-secondary font-semibold hover:underline">Log in</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

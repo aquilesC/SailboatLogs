@@ -1,0 +1,13 @@
+{
+  "name": "sailboat-log",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i logbook/static/logbook/css/input.css -o logbook/static/logbook/css/styles.css --minify",
+    "watch:css": "npx @tailwindcss/cli -i logbook/static/logbook/css/input.css -o logbook/static/logbook/css/styles.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.8",
+    "tailwindcss": "^4.1.8"
+  }
+}

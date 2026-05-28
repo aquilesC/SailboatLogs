@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Trips — Maritime Logbook{% endblock %}
+{% block meta_description %}Browse and search your sailing trip archive.{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <h1>Trips</h1>
+    <a href="{% url 'trip_start' %}" class="btn-primary" id="trip-list-start">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Start New Trip
+    </a>
+  </div>
+
+  <!-- Search Bar -->
+  <form method="get" class="flex gap-3" id="trip-search-form">
+    <input type="text" name="q" value="{{ query }}" 
+           class="form-input flex-1" 
+           placeholder="Search trips by title or boat name…"
+           id="trip-search-input">
+    <button type="submit" class="btn-secondary" id="trip-search-submit">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+    </button>
+  </form>
+
+  <!-- Trip Cards -->
+  {% if trips %}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for trip in trips %}
+    <a href="{% url 'trip_detail' pk=trip.pk %}" 
+       class="card block hover:bg-bg-surface-highlight hover:shadow-md transition-all !p-5"
+       id="trip-card-{{ trip.pk }}">
+      <div class="flex items-start justify-between">
+        <div class="flex-1 min-w-0">
+          <h3 class="truncate">{{ trip.title }}</h3>
+          <p class="text-text-secondary text-sm mt-1">{{ trip.boat.name }}</p>
+        </div>
+        {% if trip.is_active %}
+        <span class="badge-warning ml-3 shrink-0">Active</span>
+        {% else %}
+        <span class="badge-success ml-3 shrink-0">Completed</span>
+        {% endif %}
+      </div>
+
+      <div class="flex flex-wrap gap-x-6 gap-y-1 mt-4 text-xs font-mono text-text-secondary">
+        <span>📅 {{ trip.start_date|date:"Y-m-d" }}{% if trip.end_date %} → {{ trip.end_date|date:"Y-m-d" }}{% endif %}</span>
+        {% if trip.total_distance %}
+        <span>🧭 {{ trip.total_distance|floatformat:1 }} nm</span>
+        {% endif %}
+        {% if trip.max_speed %}
+        <span>⚡ {{ trip.max_speed|floatformat:1 }} kn max</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card text-center !py-16">
+    <div class="text-4xl mb-4">⛵</div>
+    <h3 class="text-text-primary mb-2">
+      {% if query %}No trips found for "{{ query }}"{% else %}No trips yet{% endif %}
+    </h3>
+    <p class="text-text-secondary mb-6">
+      {% if query %}Try a different search term.{% else %}Start your first voyage to begin logging.{% endif %}
+    </p>
+    {% if not query %}
+    <a href="{% url 'trip_start' %}" class="btn-primary" id="trip-list-empty-start">Start Your First Trip</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
