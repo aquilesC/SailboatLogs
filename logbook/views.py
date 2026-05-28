@@ -807,3 +807,7 @@ def tag_detail_view(request, tag_name):
             "log_entries": log_entries,
         },
     )
+
+
+def custom_404(request, exception):
+    return render(request, "404.html", status=404)
