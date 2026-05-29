@@ -53,7 +53,7 @@ def extract_exif_datetime(image_field):
         image_field.open("rb")
         img = Image.open(image_field.file)
         exif_data = img.getexif()
-        image_field.close()
+        image_field.seek(0)
 
         if not exif_data:
             return None
@@ -117,7 +117,7 @@ def extract_exif_gps(image_field):
         image_field.open("rb")
         img = Image.open(image_field.file)
         exif = img.getexif()
-        image_field.close()
+        image_field.seek(0)
 
         if not exif:
             return None, None
