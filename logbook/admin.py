@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Profile, Boat, Trip, Tag, LogEntry
+from .models import Profile, Boat, Trip, Tag, LogEntry, GPXFile, LogEntryPhoto
 
 
 @admin.register(Profile)
@@ -31,3 +31,15 @@ class LogEntryAdmin(admin.ModelAdmin):
     list_display = ("trip", "timestamp", "latitude", "longitude")
     list_filter = ("trip", "tags")
     filter_horizontal = ("tags",)
+
+
+@admin.register(GPXFile)
+class GPXFileAdmin(admin.ModelAdmin):
+    list_display = ("original_filename", "trip", "source", "uploaded_at")
+    list_filter = ("trip", "source")
+
+
+@admin.register(LogEntryPhoto)
+class LogEntryPhotoAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "log_entry", "source", "uploaded_at")
+    list_filter = ("source",)
