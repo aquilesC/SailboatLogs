@@ -27,6 +27,11 @@ urlpatterns = [
     path("trips/<int:pk>/", views.trip_detail_view, name="trip_detail"),
     path("trips/<int:pk>/end/", views.trip_end_view, name="trip_end"),
     path("trips/<int:pk>/log/", views.log_entry_create_view, name="log_entry_create"),
+    path(
+        "trips/<int:pk>/log_ajax/",
+        views.log_entry_create_ajax_view,
+        name="log_entry_create_ajax",
+    ),
     # Public Shared Trip
     path("shared/<slug:share_slug>/", views.trip_public_view, name="trip_public"),
     # Tags

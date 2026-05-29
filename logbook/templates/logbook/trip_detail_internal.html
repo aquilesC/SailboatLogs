@@ -168,12 +168,39 @@
     </div>
     {% endif %}
   </div>
+  </div>
+</div>
+
+<!-- Drag & Drop Overlay -->
+<div id="dnd-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999; background:rgba(30, 58, 138, 0.9); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+  <div style="text-align:center; color:white; padding:2rem; border:4px dashed rgba(255,255,255,0.5); border-radius:1rem;">
+    <svg style="width:4rem; height:4rem; margin:0 auto 1rem; color:white;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+    <h2 style="font-size:1.875rem; font-weight:700; margin-bottom:0.5rem; color:white;">Drop photos here</h2>
+    <p style="color:rgba(255,255,255,0.8);">They will be compressed and added to this trip.</p>
+  </div>
+</div>
+
+<!-- Progress Bar -->
+<div id="upload-progress-container" style="display:none; position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid #e2e8f0; padding:1rem; z-index:9998; box-shadow:0 -4px 6px -1px rgba(0,0,0,0.1);">
+  <div style="max-width:80rem; margin:0 auto; display:flex; align-items:center; gap:1rem;">
+    <div style="flex:1;">
+      <div style="display:flex; justify-content:space-between; font-size:0.875rem; margin-bottom:0.25rem;">
+        <span style="font-weight:500;" id="upload-status-text">Compressing and uploading...</span>
+        <span id="upload-percentage">0%</span>
+      </div>
+      <div style="width:100%; background-color:#e2e8f0; border-radius:9999px; height:0.625rem;">
+        <div id="upload-progress-bar" style="background-color:#1e3a8a; height:0.625rem; border-radius:9999px; width:0%; transition:width 0.3s;"></div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Leaflet JS — only loaded on this page -->
+<!-- Leaflet JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- browser-image-compression -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
 <script>
 (function() {
   const map = L.map('trip-map');
@@ -320,6 +347,112 @@
     map.setView([40, -30], 3);
   }
 })();
+
+// ── Drag and Drop Logic ──
+document.addEventListener("DOMContentLoaded", function() {
+  const dndOverlay = document.getElementById('dnd-overlay');
+  const uploadProgressContainer = document.getElementById('upload-progress-container');
+  const uploadProgressBar = document.getElementById('upload-progress-bar');
+  const uploadPercentage = document.getElementById('upload-percentage');
+  const uploadStatusText = document.getElementById('upload-status-text');
+
+  let dragCounter = 0;
+
+  window.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragCounter++;
+    dndOverlay.style.display = 'flex';
+  });
+
+  window.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) {
+      dndOverlay.style.display = 'none';
+    }
+  });
+
+  window.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+
+  window.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    dndOverlay.style.display = 'none';
+
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    uploadProgressContainer.style.display = 'block';
+    uploadProgressBar.style.width = '0%';
+    uploadPercentage.textContent = '0%';
+    
+    try {
+      const compressedFiles = [];
+      for (let i = 0; i < files.length; i++) {
+        uploadStatusText.textContent = `Compressing image ${i + 1} of ${files.length}...`;
+        const options = {
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          preserveExif: true,
+          initialQuality: 0.8
+        };
+        const compressedFile = await imageCompression(files[i], options);
+        compressedFiles.push(new File([compressedFile], files[i].name, { type: files[i].type }));
+        
+        const progress = Math.round(((i + 1) / files.length) * 30); // 30% for compression phase
+        uploadProgressBar.style.width = `${progress}%`;
+        uploadPercentage.textContent = `${progress}%`;
+      }
+
+      uploadStatusText.textContent = `Uploading ${compressedFiles.length} photo(s)...`;
+      
+      const formData = new FormData();
+      compressedFiles.forEach(f => formData.append('photos', f));
+      
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      // Use XMLHttpRequest for actual upload progress
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '{% url "log_entry_create_ajax" pk=trip.pk %}', true);
+      xhr.setRequestHeader('X-CSRFToken', csrfToken);
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = 30 + Math.round((event.loaded / event.total) * 70); // 70% for upload phase
+          uploadProgressBar.style.width = `${percentComplete}%`;
+          uploadPercentage.textContent = `${percentComplete}%`;
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          uploadStatusText.textContent = 'Upload complete! Reloading...';
+          uploadProgressBar.style.width = '100%';
+          uploadPercentage.textContent = '100%';
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          alert('Error uploading photos: ' + xhr.responseText);
+          uploadProgressContainer.style.display = 'none';
+        }
+      };
+
+      xhr.onerror = () => {
+        alert('Network error occurred during upload.');
+        uploadProgressContainer.style.display = 'none';
+      };
+
+      xhr.send(formData);
+
+    } catch (error) {
+      console.error(error);
+      alert('Error processing images.');
+      uploadProgressContainer.style.display = 'none';
+    }
+  });
+});
 </script>
 
 {% include 'logbook/partials/photo_modal.html' %}

@@ -3,7 +3,7 @@ import json
 import logging
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
@@ -735,6 +735,43 @@ def log_entry_create_view(request, pk):
         {
             "trip": trip,
         },
+    )
+
+
+@login_required
+def log_entry_create_ajax_view(request, pk):
+    """Create a manual log entry via AJAX (used for drag-and-drop)."""
+    trip = get_object_or_404(Trip, pk=pk, boat__shared_users=request.user)
+
+    if request.method == "POST":
+        photos = request.FILES.getlist("photos")
+        if not photos:
+            return JsonResponse(
+                {"status": "error", "message": "No photos provided"}, status=400
+            )
+
+        log_entry = LogEntry.objects.create(
+            trip=trip,
+            boat=trip.boat,
+            author=request.user,
+            entry_text="",
+            timestamp=timezone.now(),
+        )
+
+        for photo_file in photos:
+            photo_obj = LogEntryPhoto(
+                log_entry=log_entry,
+                image=photo_file,
+                source="web",
+            )
+            photo_obj.save()
+
+        return JsonResponse(
+            {"status": "success", "message": "Photos uploaded successfully"}
+        )
+
+    return JsonResponse(
+        {"status": "error", "message": "Method not allowed"}, status=405
     )
 
 
