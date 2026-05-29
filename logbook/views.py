@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def twilio_webhook(request):
+    logger.info(f"Incoming twilio webhook request: method={request.method}")
     if request.method == "POST":
+        logger.info("Processing POST webhook from Twilio.")
         # Validate Twilio signature if the auth token is configured
         if settings.TWILIO_AUTH_TOKEN:
             validator = RequestValidator(settings.TWILIO_AUTH_TOKEN)
@@ -38,10 +40,12 @@ def twilio_webhook(request):
         # Twilio sends data as form-urlencoded
         from_number = request.POST.get("From", "")
         body = request.POST.get("Body", "")
+        logger.info(f"Raw From: '{from_number}', Body: '{body}'")
 
         # WhatsApp numbers are typically prefixed with 'whatsapp:'
         if from_number.startswith("whatsapp:"):
             from_number = from_number.replace("whatsapp:", "")
+        logger.info(f"Normalized From number: '{from_number}'")
 
         # Parse location if sent (WhatsApp location messages)
         latitude = request.POST.get("Latitude")
@@ -63,10 +67,12 @@ def twilio_webhook(request):
         try:
             profile = Profile.objects.get(phone_number=from_number)
             user = profile.user
+            logger.info(f"Matched user {user.username} for phone number {from_number}")
             if not user.is_active:
                 logger.warning(f"Rejected webhook from inactive user: {user.username}")
                 return HttpResponse("User account is pending approval.", status=403)
         except Profile.DoesNotExist:
+            logger.warning(f"No profile found for phone number: {from_number}")
             return HttpResponse("User not found for this phone number.", status=404)
 
         # Find an active trip for this user.
@@ -79,10 +85,19 @@ def twilio_webhook(request):
 
         if active_trip:
             target_boat = active_trip.boat
+            logger.info(
+                f"Found active trip '{active_trip.title}' on boat '{target_boat.name}' for user {user.username}"
+            )
         else:
             target_boat = Boat.objects.filter(shared_users=user).order_by("-pk").first()
             if not target_boat:
+                logger.error(
+                    f"No boats found for user {user.username}. Cannot create log entry."
+                )
                 return HttpResponse("No boats found for this user.", status=404)
+            logger.info(
+                f"No active trip. Using fallback boat '{target_boat.name}' for user {user.username}"
+            )
 
         # Create LogEntry
         log_entry = LogEntry(
@@ -95,6 +110,9 @@ def twilio_webhook(request):
             longitude=longitude if longitude else None,
         )
         log_entry.save()
+        logger.info(
+            f"Successfully created LogEntry ID {log_entry.pk} for user {user.username}"
+        )
 
         # Parse tags (hashtags) from body
         hashtags = re.findall(r"#(\w+)", body)
@@ -162,8 +180,10 @@ def twilio_webhook(request):
 
         # Return TwiML response or a simple 200 OK.
         # Twilio expects an XML response, but an empty 200 is also accepted.
+        logger.info("Webhook processed successfully, returning 200 OK.")
         return HttpResponse("<Response></Response>", content_type="text/xml")
 
+    logger.warning(f"Invalid method for twilio_webhook: {request.method}")
     return HttpResponse("Method not allowed", status=405)
 
 
