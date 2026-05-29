@@ -300,27 +300,30 @@
     let position = null;
     let isProximity = false;
 
-    // Strategy 1: Interpolate on GPX track
-    for (let i = 0; i < gpxTracks.length; i++) {
-      const result = interpolateOnTrack(gpxTracks[i].timed_points, photo.timestamp);
-      if (result) {
-        position = result;
-        break;
+    // Strategy 1: Direct coordinates from log entry (extracted from EXIF or manual)
+    if (photo.lat != null && photo.lng != null) {
+      position = [photo.lat, photo.lng];
+    }
+
+    // Strategy 2: Interpolate on GPX track based on timestamp
+    if (!position) {
+      for (let i = 0; i < gpxTracks.length; i++) {
+        const result = interpolateOnTrack(gpxTracks[i].timed_points, photo.timestamp);
+        if (result) {
+          position = result;
+          break;
+        }
       }
     }
 
-    // Strategy 2: Proximity association (server-side computed)
+    // Strategy 3: Proximity association (nearest log entry pin)
     if (!position && photoLocations[String(photo.id)]) {
       const loc = photoLocations[String(photo.id)];
       position = [loc.lat, loc.lng];
       isProximity = true;
     }
 
-    // Strategy 3: Direct coordinates from log entry
-    if (!position && photo.lat != null && photo.lng != null) {
-      position = [photo.lat, photo.lng];
-    }
-
+    // Strategy 4: If no position, it simply won't be added to the map (but remains in logs)
     if (position) {
       const marker = L.marker(position, {
         icon: photoIcon(photo.thumb_url, isProximity),

@@ -750,15 +750,22 @@ def log_entry_create_ajax_view(request, pk):
                 {"status": "error", "message": "No photos provided"}, status=400
             )
 
-        log_entry = LogEntry.objects.create(
-            trip=trip,
-            boat=trip.boat,
-            author=request.user,
-            entry_text="",
-            timestamp=timezone.now(),
-        )
-
         for photo_file in photos:
+            from logbook.utils import extract_exif_datetime, extract_exif_gps
+
+            dt = extract_exif_datetime(photo_file)
+            lat, lng = extract_exif_gps(photo_file)
+
+            log_entry = LogEntry.objects.create(
+                trip=trip,
+                boat=trip.boat,
+                author=request.user,
+                entry_text="",
+                timestamp=dt or timezone.now(),
+                latitude=lat,
+                longitude=lng,
+            )
+
             photo_obj = LogEntryPhoto(
                 log_entry=log_entry,
                 image=photo_file,

@@ -108,6 +108,48 @@ def extract_exif_datetime(image_field):
         return None
 
 
+def extract_exif_gps(image_field):
+    """
+    Extract GPS coordinates (latitude, longitude) from EXIF data.
+    Returns a tuple of floats (lat, lng) or (None, None).
+    """
+    try:
+        image_field.open("rb")
+        img = Image.open(image_field.file)
+        exif = img.getexif()
+        image_field.close()
+
+        if not exif:
+            return None, None
+
+        gps_ifd = exif.get_ifd(ExifBase.GPSInfo)
+        if not gps_ifd:
+            return None, None
+
+        def _convert_to_degrees(value):
+            d = float(value[0])
+            m = float(value[1])
+            s = float(value[2])
+            return d + (m / 60.0) + (s / 3600.0)
+
+        lat = None
+        lng = None
+
+        if 2 in gps_ifd and 4 in gps_ifd:
+            lat = _convert_to_degrees(gps_ifd[2])
+            if gps_ifd.get(1) == "S":
+                lat = -lat
+
+            lng = _convert_to_degrees(gps_ifd[4])
+            if gps_ifd.get(3) == "W":
+                lng = -lng
+
+        return lat, lng
+    except Exception as e:
+        logger.warning(f"Error extracting EXIF GPS: {e}")
+        return None, None
+
+
 def generate_thumbnail(image_field, size=(150, 150)):
     """
     Generate a center-cropped JPEG thumbnail from an image field.
