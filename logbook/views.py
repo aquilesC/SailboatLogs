@@ -883,3 +883,11 @@ def tag_detail_view(request, tag_name):
 
 def custom_404(request, exception):
     return render(request, "404.html", status=404)
+
+
+def visualize_csv_view(request):
+    """
+    Renders a page with a file uploader to visualize CSV logs (e.g. YDNR devices).
+    Data is parsed entirely client-side using JavaScript. No data is stored.
+    """
+    return render(request, "logbook/visualize_csv.html")

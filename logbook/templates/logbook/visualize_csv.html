@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Visualize CSV Log | Maritime Logbook{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style>
+    #map { height: 400px; z-index: 10; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2">Visualize CSV Log</h1>
+    <p class="text-text-secondary">Upload a YDNR CSV log file to see the track and metrics. Data is parsed locally in your browser and is not uploaded to our servers.</p>
+</div>
+
+<div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light mb-8">
+    <div class="flex flex-col sm:flex-row gap-4 items-end">
+        <div class="flex-1">
+            <label class="block text-sm font-medium text-text-secondary mb-1">Select CSV File</label>
+            <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-sm text-text-primary
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-md file:border-0
+                file:text-sm file:font-semibold
+                file:bg-brand-primary file:text-text-inverse
+                hover:file:bg-brand-primary/90
+                focus:outline-none focus:ring-2 focus:ring-brand-primary/50 cursor-pointer"/>
+        </div>
+        <div>
+            <button id="loadBtn" class="btn-primary" disabled>Load Data</button>
+        </div>
+    </div>
+    
+    <!-- Filter Section (hidden by default) -->
+    <div id="filterSection" class="hidden mt-6 pt-6 border-t border-border-light">
+        <h3 class="text-lg font-medium mb-4">Filter by Date/Time</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-sm font-medium text-text-secondary mb-1">Start Time</label>
+                <input type="datetime-local" id="filterStart" class="form-input block w-full rounded-md shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-text-secondary mb-1">End Time</label>
+                <input type="datetime-local" id="filterEnd" class="form-input block w-full rounded-md shadow-sm">
+            </div>
+            <div>
+                <button id="applyFilterBtn" class="btn-primary w-full sm:w-auto">Apply Filter</button>
+                <button id="resetFilterBtn" class="btn-secondary w-full sm:w-auto ml-2 mt-2 sm:mt-0">Reset</button>
+            </div>
+        </div>
+        <div id="dataSummary" class="text-sm text-text-secondary mt-2"></div>
+    </div>
+</div>
+
+<div id="visualizations" class="hidden space-y-8">
+    <!-- Map Container -->
+    <div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light">
+        <h2 class="text-xl font-semibold mb-4">Track Map</h2>
+        <div id="map" class="rounded-lg border border-border-light"></div>
+    </div>
+
+    <!-- Charts Container -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Speed Chart -->
+        <div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light">
+            <h2 class="text-lg font-semibold mb-4">Speed (SOG vs STW)</h2>
+            <canvas id="speedChart"></canvas>
+        </div>
+
+        <!-- Wind Chart -->
+        <div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light">
+            <h2 class="text-lg font-semibold mb-4">Wind Speed (TWS vs AWS)</h2>
+            <canvas id="windChart"></canvas>
+        </div>
+
+        <!-- Depth Chart -->
+        <div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light lg:col-span-2">
+            <h2 class="text-lg font-semibold mb-4">Depth</h2>
+            <canvas id="depthChart" height="100"></canvas>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- PapaParse -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- date-fns for chart.js time adapter (optional, but using basic line charts here instead for simplicity/performance with big data) -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const fileInput = document.getElementById('csvFileInput');
+    const loadBtn = document.getElementById('loadBtn');
+    const filterSection = document.getElementById('filterSection');
+    const visualizations = document.getElementById('visualizations');
+    const filterStart = document.getElementById('filterStart');
+    const filterEnd = document.getElementById('filterEnd');
+    const applyFilterBtn = document.getElementById('applyFilterBtn');
+    const resetFilterBtn = document.getElementById('resetFilterBtn');
+    const dataSummary = document.getElementById('dataSummary');
+
+    let rawData = [];
+    let mapInstance = null;
+    let trackLayer = null;
+    let speedChartInstance = null;
+    let windChartInstance = null;
+    let depthChartInstance = null;
+
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files.length > 0) {
+            loadBtn.disabled = false;
+        } else {
+            loadBtn.disabled = true;
+        }
+    });
+
+    loadBtn.addEventListener('click', function() {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        loadBtn.disabled = true;
+        loadBtn.textContent = 'Parsing...';
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            // Assuming delimiter is semicolon based on the provided sample
+            delimiter: ';', 
+            complete: function(results) {
+                processData(results.data);
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Load Data';
+            },
+            error: function(err) {
+                alert("Error parsing CSV: " + err.message);
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Load Data';
+            }
+        });
+    });
+
+    applyFilterBtn.addEventListener('click', function() {
+        const start = filterStart.value ? new Date(filterStart.value).getTime() : null;
+        const end = filterEnd.value ? new Date(filterEnd.value).getTime() : null;
+        renderVisualizations(start, end);
+    });
+
+    resetFilterBtn.addEventListener('click', function() {
+        filterStart.value = '';
+        filterEnd.value = '';
+        renderVisualizations(null, null);
+    });
+
+    function parseDateString(str) {
+        if (!str) return null;
+        // Strip quotes if they exist
+        str = str.replace(/"/g, '');
+        // format: 29/05/2026, 17:14:00
+        const parts = str.split(', ');
+        if (parts.length !== 2) return null;
+        const dateParts = parts[0].split('/');
+        const timeParts = parts[1].split(':');
+        return new Date(dateParts[2], parseInt(dateParts[1])-1, dateParts[0], timeParts[0], timeParts[1], timeParts[2]);
+    }
+
+    function processData(data) {
+        rawData = [];
+        let minDate = null;
+        let maxDate = null;
+
+        data.forEach(row => {
+            const dt = parseDateString(row['Time']);
+            if (dt && !isNaN(dt.getTime())) {
+                const ts = dt.getTime();
+                if (!minDate || ts < minDate) minDate = ts;
+                if (!maxDate || ts > maxDate) maxDate = ts;
+
+                rawData.push({
+                    ts: ts,
+                    label: dt.toLocaleString(),
+                    lat: parseFloat(row['Latitude']),
+                    lon: parseFloat(row['Longitude']),
+                    sog: parseFloat(row['SOG']),
+                    stw: parseFloat(row['STW']),
+                    tws: parseFloat(row['TWS']),
+                    aws: parseFloat(row['AWS']),
+                    depth: parseFloat(row['Depth'])
+                });
+            }
+        });
+
+        // Sort by time
+        rawData.sort((a, b) => a.ts - b.ts);
+
+        // Setup date filters
+        if (minDate && maxDate) {
+            // function to pad to YYYY-MM-DDTHH:MM
+            const pad = (num) => num.toString().padStart(2, '0');
+            const toLocalISO = (d) => {
+                const date = new Date(d);
+                return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+            };
+            filterStart.value = toLocalISO(minDate);
+            filterEnd.value = toLocalISO(maxDate);
+        }
+
+        filterSection.classList.remove('hidden');
+        visualizations.classList.remove('hidden');
+        
+        // Initial render
+        renderVisualizations(null, null);
+    }
+
+    function renderVisualizations(startTs, endTs) {
+        // Filter data
+        const filteredData = rawData.filter(d => {
+            if (startTs && d.ts < startTs) return false;
+            if (endTs && d.ts > endTs) return false;
+            return true;
+        });
+
+        dataSummary.textContent = `Showing ${filteredData.length} data points.`;
+
+        // Prepare chart data arrays
+        const labels = [];
+        const sogData = [];
+        const stwData = [];
+        const twsData = [];
+        const awsData = [];
+        const depthData = [];
+        const coordinates = [];
+
+        // For large datasets, we might want to downsample, but Chart.js can handle ~10k points okay with tension=0
+        const step = Math.max(1, Math.floor(filteredData.length / 2000)); // Limit to ~2000 points for chart performance if huge
+
+        for (let i = 0; i < filteredData.length; i++) {
+            const d = filteredData[i];
+            
+            // Add coordinates to map if valid
+            if (!isNaN(d.lat) && !isNaN(d.lon)) {
+                coordinates.push([d.lat, d.lon]);
+            }
+
+            // Add to charts (apply step for performance if needed)
+            if (i % step === 0 || i === filteredData.length - 1) {
+                labels.push(d.label);
+                sogData.push(isNaN(d.sog) ? null : d.sog);
+                stwData.push(isNaN(d.stw) ? null : d.stw);
+                twsData.push(isNaN(d.tws) ? null : d.tws);
+                awsData.push(isNaN(d.aws) ? null : d.aws);
+                depthData.push(isNaN(d.depth) ? null : d.depth);
+            }
+        }
+
+        updateMap(coordinates);
+        updateCharts(labels, sogData, stwData, twsData, awsData, depthData);
+    }
+
+    function updateMap(coordinates) {
+        if (!mapInstance) {
+            mapInstance = L.map('map').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(mapInstance);
+        }
+
+        if (trackLayer) {
+            mapInstance.removeLayer(trackLayer);
+        }
+
+        if (coordinates.length > 0) {
+            trackLayer = L.polyline(coordinates, {color: 'blue', weight: 3}).addTo(mapInstance);
+            mapInstance.fitBounds(trackLayer.getBounds(), {padding: [20, 20]});
+        }
+    }
+
+    function updateCharts(labels, sogData, stwData, twsData, awsData, depthData) {
+        // Shared chart options
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                point: { radius: 0 },
+                line: { borderWidth: 2, tension: 0.1 }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    ticks: { maxTicksLimit: 10 }
+                }
+            }
+        };
+
+        // Speed Chart
+        if (speedChartInstance) speedChartInstance.destroy();
+        const ctxSpeed = document.getElementById('speedChart').getContext('2d');
+        speedChartInstance = new Chart(ctxSpeed, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'SOG (knots)', data: sogData, borderColor: '#3b82f6', backgroundColor: '#3b82f6' },
+                    { label: 'STW (knots)', data: stwData, borderColor: '#10b981', backgroundColor: '#10b981' }
+                ]
+            },
+            options: commonOptions
+        });
+
+        // Wind Chart
+        if (windChartInstance) windChartInstance.destroy();
+        const ctxWind = document.getElementById('windChart').getContext('2d');
+        windChartInstance = new Chart(ctxWind, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'TWS (knots)', data: twsData, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6' },
+                    { label: 'AWS (knots)', data: awsData, borderColor: '#f59e0b', backgroundColor: '#f59e0b' }
+                ]
+            },
+            options: commonOptions
+        });
+
+        // Depth Chart
+        if (depthChartInstance) depthChartInstance.destroy();
+        const ctxDepth = document.getElementById('depthChart').getContext('2d');
+        depthChartInstance = new Chart(ctxDepth, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Depth (m)', data: depthData, borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.2)', fill: true }
+                ]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    x: { ticks: { maxTicksLimit: 10 } },
+                    y: { reverse: true } // Usually depth is reversed
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

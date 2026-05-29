@@ -37,6 +37,7 @@
         <div class="hidden sm:flex items-center gap-6">
           <a href="{% url 'dashboard' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-dashboard">Dashboard</a>
           <a href="{% url 'trip_list' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-trips">Trips</a>
+          <a href="{% url 'visualize_csv' %}" class="text-text-inverse/80 hover:text-text-inverse transition-colors text-sm font-medium" id="nav-visualize-csv">Visualize Log</a>
           <a href="{% url 'trip_start' %}" class="btn-primary text-sm !py-2 !px-4" id="nav-start-trip">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
@@ -75,6 +76,7 @@
       <div id="mobile-menu" class="hidden sm:hidden pb-4 border-t border-text-inverse/10 mt-2 pt-3">
         <a href="{% url 'dashboard' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Dashboard</a>
         <a href="{% url 'trip_list' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Trips</a>
+        <a href="{% url 'visualize_csv' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Visualize Log</a>
         <a href="{% url 'trip_start' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Start Trip</a>
         <a href="{% url 'profile' %}" class="block py-2 text-text-inverse/80 hover:text-text-inverse text-sm font-medium">Profile</a>
         <form method="post" action="{% url 'logout' %}" class="block">

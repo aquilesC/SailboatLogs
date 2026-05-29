@@ -36,4 +36,6 @@ urlpatterns = [
     path("shared/<slug:share_slug>/", views.trip_public_view, name="trip_public"),
     # Tags
     path("tags/<str:tag_name>/", views.tag_detail_view, name="tag_detail"),
+    # Visualization
+    path("visualize-csv/", views.visualize_csv_view, name="visualize_csv"),
 ]
