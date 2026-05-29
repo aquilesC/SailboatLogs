@@ -393,20 +393,34 @@ document.addEventListener("DOMContentLoaded", function() {
     
     try {
       const compressedFiles = [];
+      const failedFiles = [];
+      
       for (let i = 0; i < files.length; i++) {
         uploadStatusText.textContent = `Compressing image ${i + 1} of ${files.length}...`;
-        const options = {
-          maxWidthOrHeight: 1920,
-          useWebWorker: true,
-          preserveExif: true,
-          initialQuality: 0.8
-        };
-        const compressedFile = await imageCompression(files[i], options);
-        compressedFiles.push(new File([compressedFile], files[i].name, { type: files[i].type }));
+        
+        try {
+          const options = {
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+            preserveExif: true,
+            initialQuality: 0.8
+          };
+          const compressedFile = await imageCompression(files[i], options);
+          compressedFiles.push(new File([compressedFile], files[i].name, { type: files[i].type }));
+        } catch (err) {
+          console.error(`Error compressing ${files[i].name}:`, err);
+          failedFiles.push({ name: files[i].name, reason: err.message || err.toString() });
+        }
         
         const progress = Math.round(((i + 1) / files.length) * 30); // 30% for compression phase
         uploadProgressBar.style.width = `${progress}%`;
         uploadPercentage.textContent = `${progress}%`;
+      }
+
+      if (compressedFiles.length === 0) {
+        alert("All selected images failed to compress or are unsupported (e.g., HEIC format).\n\nDetails:\n" + failedFiles.map(f => `- ${f.name}: ${f.reason}`).join('\n'));
+        uploadProgressContainer.style.display = 'none';
+        return;
       }
 
       uploadStatusText.textContent = `Uploading ${compressedFiles.length} photo(s)...`;
@@ -435,6 +449,11 @@ document.addEventListener("DOMContentLoaded", function() {
           uploadStatusText.textContent = 'Upload complete! Reloading...';
           uploadProgressBar.style.width = '100%';
           uploadPercentage.textContent = '100%';
+          
+          if (failedFiles.length > 0) {
+            alert("Upload successful! However, the following unsupported files were skipped:\n\n" + failedFiles.map(f => `- ${f.name} (${f.reason})`).join('\n'));
+          }
+
           setTimeout(() => window.location.reload(), 500);
         } else {
           alert('Error uploading photos: ' + xhr.responseText);
@@ -451,7 +470,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     } catch (error) {
       console.error(error);
-      alert('Error processing images.');
+      alert('An unexpected error occurred during processing: ' + (error.message || error.toString()));
       uploadProgressContainer.style.display = 'none';
     }
   });
