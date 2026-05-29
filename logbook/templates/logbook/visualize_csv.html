@@ -6,7 +6,7 @@
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <style>
-    #map { height: 400px; z-index: 10; }
+    #map { height: 400px; z-index: 0; }
 </style>
 {% endblock %}
 
@@ -62,23 +62,21 @@
     </div>
 
     <!-- Charts Container -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Speed Chart -->
+    <div class="grid grid-cols-1 gap-8">
+        <!-- Dynamic Chart -->
         <div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light">
-            <h2 class="text-lg font-semibold mb-4">Speed (SOG vs STW)</h2>
-            <canvas id="speedChart"></canvas>
-        </div>
-
-        <!-- Wind Chart -->
-        <div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light">
-            <h2 class="text-lg font-semibold mb-4">Wind Speed (TWS vs AWS)</h2>
-            <canvas id="windChart"></canvas>
-        </div>
-
-        <!-- Depth Chart -->
-        <div class="bg-surface p-6 rounded-lg shadow-sm border border-border-light lg:col-span-2">
-            <h2 class="text-lg font-semibold mb-4">Depth</h2>
-            <canvas id="depthChart" height="100"></canvas>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                <h2 class="text-lg font-semibold">Plot Data</h2>
+                <div class="w-full sm:w-1/2">
+                    <select id="columnSelect" multiple class="form-input block w-full rounded-md shadow-sm h-24 text-sm bg-white">
+                        <!-- Options populated dynamically -->
+                    </select>
+                    <p class="text-xs text-text-secondary mt-1">Hold Ctrl/Cmd to select multiple columns</p>
+                </div>
+            </div>
+            <div style="position: relative; height: 400px; width: 100%;">
+                <canvas id="dynamicChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -106,12 +104,13 @@ document.addEventListener("DOMContentLoaded", function() {
     const resetFilterBtn = document.getElementById('resetFilterBtn');
     const dataSummary = document.getElementById('dataSummary');
 
+    const columnSelect = document.getElementById('columnSelect');
+
     let rawData = [];
+    let availableColumns = [];
     let mapInstance = null;
     let trackLayer = null;
-    let speedChartInstance = null;
-    let windChartInstance = null;
-    let depthChartInstance = null;
+    let dynamicChartInstance = null;
 
     fileInput.addEventListener('change', function() {
         if (this.files && this.files.length > 0) {
@@ -146,6 +145,13 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
+    columnSelect.addEventListener('change', function() {
+        renderVisualizations(
+            filterStart.value ? new Date(filterStart.value).getTime() : null,
+            filterEnd.value ? new Date(filterEnd.value).getTime() : null
+        );
+    });
+
     applyFilterBtn.addEventListener('click', function() {
         const start = filterStart.value ? new Date(filterStart.value).getTime() : null;
         const end = filterEnd.value ? new Date(filterEnd.value).getTime() : null;
@@ -175,6 +181,22 @@ document.addEventListener("DOMContentLoaded", function() {
         let minDate = null;
         let maxDate = null;
 
+        // Get columns to plot (excluding some default ones)
+        const excludeCols = ['Time', 'Latitude', 'Longitude'];
+        availableColumns = Object.keys(data[0] || {}).filter(c => !excludeCols.includes(c) && c.trim() !== '');
+
+        // Populate select box
+        columnSelect.innerHTML = '';
+        availableColumns.forEach(col => {
+            const option = document.createElement('option');
+            option.value = col;
+            option.textContent = col;
+            if (['SOG', 'STW', 'TWS', 'AWS', 'Depth'].includes(col)) {
+                option.selected = true; // pre-select some useful defaults
+            }
+            columnSelect.appendChild(option);
+        });
+
         data.forEach(row => {
             const dt = parseDateString(row['Time']);
             if (dt && !isNaN(dt.getTime())) {
@@ -182,17 +204,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (!minDate || ts < minDate) minDate = ts;
                 if (!maxDate || ts > maxDate) maxDate = ts;
 
-                rawData.push({
+                // Keep all data values dynamic
+                const dataObj = {
                     ts: ts,
                     label: dt.toLocaleString(),
                     lat: parseFloat(row['Latitude']),
-                    lon: parseFloat(row['Longitude']),
-                    sog: parseFloat(row['SOG']),
-                    stw: parseFloat(row['STW']),
-                    tws: parseFloat(row['TWS']),
-                    aws: parseFloat(row['AWS']),
-                    depth: parseFloat(row['Depth'])
+                    lon: parseFloat(row['Longitude'])
+                };
+                availableColumns.forEach(col => {
+                    dataObj[col] = parseFloat(row[col]);
                 });
+                rawData.push(dataObj);
             }
         });
 
@@ -216,6 +238,16 @@ document.addEventListener("DOMContentLoaded", function() {
         
         // Initial render
         renderVisualizations(null, null);
+
+        // Fix leaflet map sizing issue by invalidating size after making container visible
+        setTimeout(() => {
+            if (mapInstance) {
+                mapInstance.invalidateSize();
+                if (trackLayer) {
+                    mapInstance.fitBounds(trackLayer.getBounds(), {padding: [20, 20]});
+                }
+            }
+        }, 100);
     }
 
     function renderVisualizations(startTs, endTs) {
@@ -228,13 +260,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         dataSummary.textContent = `Showing ${filteredData.length} data points.`;
 
+        // Get selected columns
+        const selectedColumns = Array.from(columnSelect.selectedOptions).map(opt => opt.value);
+
         // Prepare chart data arrays
         const labels = [];
-        const sogData = [];
-        const stwData = [];
-        const twsData = [];
-        const awsData = [];
-        const depthData = [];
+        const chartData = {};
+        selectedColumns.forEach(col => chartData[col] = []);
         const coordinates = [];
 
         // For large datasets, we might want to downsample, but Chart.js can handle ~10k points okay with tension=0
@@ -251,24 +283,23 @@ document.addEventListener("DOMContentLoaded", function() {
             // Add to charts (apply step for performance if needed)
             if (i % step === 0 || i === filteredData.length - 1) {
                 labels.push(d.label);
-                sogData.push(isNaN(d.sog) ? null : d.sog);
-                stwData.push(isNaN(d.stw) ? null : d.stw);
-                twsData.push(isNaN(d.tws) ? null : d.tws);
-                awsData.push(isNaN(d.aws) ? null : d.aws);
-                depthData.push(isNaN(d.depth) ? null : d.depth);
+                selectedColumns.forEach(col => {
+                    chartData[col].push(isNaN(d[col]) ? null : d[col]);
+                });
             }
         }
 
         updateMap(coordinates);
-        updateCharts(labels, sogData, stwData, twsData, awsData, depthData);
+        updateCharts(labels, chartData, selectedColumns);
     }
 
     function updateMap(coordinates) {
         if (!mapInstance) {
             mapInstance = L.map('map').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 maxZoom: 19,
-                attribution: '© OpenStreetMap'
+                subdomains: 'abcd',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
             }).addTo(mapInstance);
         }
 
@@ -277,18 +308,18 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         if (coordinates.length > 0) {
-            trackLayer = L.polyline(coordinates, {color: 'blue', weight: 3}).addTo(mapInstance);
+            trackLayer = L.polyline(coordinates, {color: '#1E3A8A', weight: 3}).addTo(mapInstance);
             mapInstance.fitBounds(trackLayer.getBounds(), {padding: [20, 20]});
         }
     }
 
-    function updateCharts(labels, sogData, stwData, twsData, awsData, depthData) {
+    function updateCharts(labels, chartData, selectedColumns) {
         // Shared chart options
         const commonOptions = {
             responsive: true,
             maintainAspectRatio: false,
             elements: {
-                point: { radius: 0 },
+                point: { radius: 0, hitRadius: 10, hoverRadius: 4 },
                 line: { borderWidth: 2, tension: 0.1 }
             },
             interaction: {
@@ -302,54 +333,44 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         };
 
-        // Speed Chart
-        if (speedChartInstance) speedChartInstance.destroy();
-        const ctxSpeed = document.getElementById('speedChart').getContext('2d');
-        speedChartInstance = new Chart(ctxSpeed, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'SOG (knots)', data: sogData, borderColor: '#3b82f6', backgroundColor: '#3b82f6' },
-                    { label: 'STW (knots)', data: stwData, borderColor: '#10b981', backgroundColor: '#10b981' }
-                ]
-            },
-            options: commonOptions
+        const colors = [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+            '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
+        ];
+
+        const datasets = selectedColumns.map((col, idx) => {
+            const color = colors[idx % colors.length];
+            return {
+                label: col,
+                data: chartData[col],
+                borderColor: color,
+                backgroundColor: color,
+                yAxisID: col === 'Depth' ? 'yDepth' : 'y' // Optionally use a separate axis for Depth to reverse it, but for simplicity let's stick to auto-scaling or just 2 main axes
+            };
         });
 
-        // Wind Chart
-        if (windChartInstance) windChartInstance.destroy();
-        const ctxWind = document.getElementById('windChart').getContext('2d');
-        windChartInstance = new Chart(ctxWind, {
+        // Add depth specific axis if Depth is selected
+        if (selectedColumns.includes('Depth')) {
+            commonOptions.scales.yDepth = {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                reverse: true, // Depth usually grows downwards
+                title: { display: true, text: 'Depth' },
+                grid: { drawOnChartArea: false }
+            };
+        }
+
+        // Dynamic Chart
+        if (dynamicChartInstance) dynamicChartInstance.destroy();
+        const ctxDynamic = document.getElementById('dynamicChart').getContext('2d');
+        dynamicChartInstance = new Chart(ctxDynamic, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [
-                    { label: 'TWS (knots)', data: twsData, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6' },
-                    { label: 'AWS (knots)', data: awsData, borderColor: '#f59e0b', backgroundColor: '#f59e0b' }
-                ]
+                datasets: datasets
             },
             options: commonOptions
-        });
-
-        // Depth Chart
-        if (depthChartInstance) depthChartInstance.destroy();
-        const ctxDepth = document.getElementById('depthChart').getContext('2d');
-        depthChartInstance = new Chart(ctxDepth, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Depth (m)', data: depthData, borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.2)', fill: true }
-                ]
-            },
-            options: {
-                ...commonOptions,
-                scales: {
-                    x: { ticks: { maxTicksLimit: 10 } },
-                    y: { reverse: true } // Usually depth is reversed
-                }
-            }
         });
     }
 });
